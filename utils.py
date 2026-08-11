@@ -1,26 +1,45 @@
-import time
-import functools
+from typing import List, Dict
 
-# A decorator to measure the performance of functions
 
-def performance_measure(func):
-    @functools.wraps(func)
-    def wrapper(*args, **kwargs):
-        start_time = time.time()  # Record start time
-        result = func(*args, **kwargs)  # Call the actual function
-        end_time = time.time()  # Record end time
-        execution_time = end_time - start_time  # Calculate execution time
-        print(f'Performance: {func.__name__} executed in {execution_time:.6f} seconds')
-        return result
-    return wrapper
+def calculate_average(numbers: List[float]) -> float:
+    """
+    Calculate the average of a list of numbers.
 
-# Example function to demonstrate performance measurement
-@performance_measure
-def compute_factorial(n):
-    if n == 0:
-        return 1
-    return n * compute_factorial(n - 1)  # Recursive call
+    Args:
+        numbers (List[float]): A list of float numbers.
 
-if __name__ == '__main__':
-    result = compute_factorial(10)  # Call function to see performance
-    print(f'Factorial Result: {result}')
+    Returns:
+        float: The average of the numbers.
+    """
+    if not numbers:
+        return 0.0
+    return sum(numbers) / len(numbers)
+
+
+def filter_even_numbers(numbers: List[int]) -> List[int]:
+    """
+    Filter out the even numbers from a list.
+
+    Args:
+        numbers (List[int]): A list of integer numbers.
+
+    Returns:
+        List[int]: A list containing only the odd numbers.
+    """
+    return [num for num in numbers if num % 2 != 0]
+
+
+def count_occurrences(items: List[str]) -> Dict[str, int]:
+    """
+    Count the occurrences of each item in a list.
+
+    Args:
+        items (List[str]): A list of strings.
+
+    Returns:
+        Dict[str, int]: A dictionary with items as keys and their occurrences as values.
+    """
+    counts = {}
+    for item in items:
+        counts[item] = counts.get(item, 0) + 1
+    return counts
