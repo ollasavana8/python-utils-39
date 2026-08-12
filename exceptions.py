@@ -1,23 +1,26 @@
 class CustomError(Exception):
-    """Exception raised for specific errors in the application."""
-    def __init__(self, message: str, code: int = 500) -> None:
-        """Initialize CustomError with a message and an error code."""
-        super().__init__(message)
-        self.code = code
+    """Base class for custom exceptions in this module."""
+    pass
 
-    def __str__(self) -> str:
-        """Return string representation of the error."""
-        return f"{self.code}: {self.args[0]}"
+class DataNotFoundError(CustomError):
+    """Exception raised when expected data is not found."""
+    def __init__(self, message='Data not found.'):  
+        self.message = message
+        super().__init__(self.message)
 
-class ValidationError(CustomError):
-    """Exception raised for validation errors."""
-    def __init__(self, message: str) -> None:
-        """Initialize ValidationError with a custom message."""
-        super().__init__(message, code=400)
+class InvalidDataError(CustomError):
+    """Exception raised for invalid data types or values."""
+    def __init__(self, data, expected_type):
+        self.message = f'Invalid data: {data}. Expected type: {expected_type}'
+        super().__init__(self.message)
 
-class NotFoundError(CustomError):
-    """Exception raised when a resource is not found."""
-    def __init__(self, resource: str) -> None:
-        """Initialize NotFoundError with the resource that was not found."""
-        message = f"{resource} not found"
-        super().__init__(message, code=404)
+class DatabaseConnectionError(CustomError):
+    """Exception raised for errors related to database connections."""
+    def __init__(self, message='Could not connect to the database.'):  
+        self.message = message
+        super().__init__(self.message)
+
+# Example usage:
+# raise DataNotFoundError()
+# raise InvalidDataError(data='abc', expected_type='int')
+# raise DatabaseConnectionError()
