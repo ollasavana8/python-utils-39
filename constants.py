@@ -1,28 +1,28 @@
-# Constants used across the application
+class StatusCodes:
+    OK = 200
+    CREATED = 201
+    ACCEPTED = 202
+    NO_CONTENT = 204
+    BAD_REQUEST = 400
+    UNAUTHORIZED = 401
+    FORBIDDEN = 403
+    NOT_FOUND = 404
+    INTERNAL_SERVER_ERROR = 500
 
-# Define common error messages
-INVALID_INPUT = 'Invalid input provided'
-RESOURCE_NOT_FOUND = 'Requested resource was not found'
-UNAUTHORIZED_ACCESS = 'User is not authorized to perform this action'
+class Messages:
+    USER_CREATED = 'User created successfully'
+    USER_UPDATED = 'User updated successfully'
+    USER_DELETED = 'User deleted successfully'
+    INVALID_INPUT = 'Invalid input provided'
+    UNAUTHORIZED_ACCESS = 'Unauthorized access'
 
-# Define various thresholds and limits
-MAX_RETRIES = 5
-TIMEOUT_SECONDS = 30
+class Config:
+    API_VERSION = 'v1'
+    DATABASE_URI = 'sqlite:///mydb.db'
+    SECRET_KEY = 'your-secret-key-here'
 
-# Minimum and maximum values for numeric inputs
-MIN_USERNAME_LENGTH = 3
-MAX_USERNAME_LENGTH = 20
-MIN_PASSWORD_LENGTH = 8
+class Roles:
+    ADMIN = 'admin'
+    USER = 'user'
+    GUEST = 'guest'
 
-# Commonly used statuses
-STATUS_SUCCESS = 'success'
-STATUS_FAILURE = 'failure'
-
-# File paths
-LOG_FILE_PATH = '/var/log/app.log'
-CONFIG_FILE_PATH = '/etc/app/config.json'
-
-# Roles within the application
-ROLE_ADMIN = 'admin'
-ROLE_USER = 'user'
-ROLE_GUEST = 'guest'
