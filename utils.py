@@ -1,56 +1,35 @@
-from typing import List, Optional
+import os
+import json
 
+class FileUtils:
+    @staticmethod
+    def read_json(file_path):
+        """Reads a JSON file and returns its content."""
+        if not os.path.exists(file_path):
+            raise FileNotFoundError(f"{file_path} does not exist.")
+        with open(file_path, 'r', encoding='utf-8') as f:
+            return json.load(f)
 
-def filter_even_numbers(numbers: List[int]) -> List[int]:
-    """
-    Filters out even numbers from a list.
+    @staticmethod
+    def write_json(file_path, data):
+        """Writes data to a JSON file."""
+        with open(file_path, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=4)
 
-    Parameters:
-    numbers (List[int]): A list of integers.
+    @staticmethod
+    def list_files(directory, extension=None):
+        """Lists files in a directory, optionally filtered by file extension."""
+        if not os.path.isdir(directory):
+            raise NotADirectoryError(f"{directory} is not a valid directory.")
+        files = [f for f in os.listdir(directory) if os.path.isfile(os.path.join(directory, f))]
+        if extension:
+            files = [f for f in files if f.endswith(extension)]
+        return files
 
-    Returns:
-    List[int]: A list containing only the even integers from the input list.
-    """
-    return [num for num in numbers if num % 2 == 0]
-
-
-def find_maximum(numbers: List[float]) -> Optional[float]:
-    """
-    Finds the maximum number in a list.
-
-    Parameters:
-    numbers (List[float]): A list of float numbers.
-
-    Returns:
-    Optional[float]: The maximum number in the list, or None if the list is empty.
-    """
-    return max(numbers) if numbers else None
-
-
-def count_occurrences(items: List[str]) -> dict:
-    """
-    Counts the occurrences of each item in a list.
-
-    Parameters:
-    items (List[str]): A list of strings.
-
-    Returns:
-    dict: A dictionary with items as keys and their counts as values.
-    """
-    counts = {}
-    for item in items:
-        counts[item] = counts.get(item, 0) + 1
-    return counts
-
-
-def reverse_string(s: str) -> str:
-    """
-    Reverses the given string.
-
-    Parameters:
-    s (str): A string to be reversed.
-
-    Returns:
-    str: The reversed string.
-    """
-    return s[::-1]
+    @staticmethod
+    def delete_file(file_path):
+        """Deletes a file if it exists."""
+        if os.path.exists(file_path):
+            os.remove(file_path)
+        else:
+            raise FileNotFoundError(f"{file_path} does not exist and cannot be deleted.")
