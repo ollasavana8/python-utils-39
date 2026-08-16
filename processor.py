@@ -1,36 +1,35 @@
 import json
-from typing import Any, Dict
+import logging
 
-class ProcessorError(Exception):
-    pass
+logging.basicConfig(level=logging.ERROR)
 
-class DataProcessor:
-    def __init__(self, data: Dict[str, Any]):
+class Processor:
+    def __init__(self, data):
         self.data = data
 
-    def process_data(self) -> Dict[str, Any]:
-        if not isinstance(self.data, dict):
-            raise ProcessorError('Data must be a dictionary.')
-        try:
-            result = self.perform_computation(self.data)
-            return result
-        except (KeyError, ValueError) as e:
-            raise ProcessorError(f'Error in processing data: {e}')
+    def process_data(self):
+        if not isinstance(self.data, list):
+            logging.error('Data is not a list')
+            return None
+        
+        processed = []
+        for item in self.data:
+            try:
+                if not isinstance(item, dict):
+                    raise ValueError('Item is not a dictionary')
+                processed.append(self._process_item(item))
+            except ValueError as e:
+                logging.error(f'ValueError: {e}')
+            except Exception as e:
+                logging.error(f'Unexpected error: {e}')
+        return processed
 
-    def perform_computation(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        # Dummy computation to simulate processing
-        if 'value' not in data:
-            raise KeyError('Missing required field: value')
-        if not isinstance(data['value'], (int, float)):
-            raise ValueError('Field value must be a number.')
-        data['result'] = data['value'] * 2  # Simple operation
-        return data
+    def _process_item(self, item):
+        # Simulate processing item
+        return {k: v for k, v in item.items() if v is not None}
 
 if __name__ == '__main__':
-    sample_data = {'value': 10}
-    processor = DataProcessor(sample_data)
-    try:
-        processed_data = processor.process_data()
-        print(json.dumps(processed_data, indent=4))
-    except ProcessorError as e:
-        print(f'Processing failed: {e}')
+    data = [{'key1': 'value1'}, {'key2': None}, 'not a dict', {'key3': 'value3'}]
+    processor = Processor(data)
+    result = processor.process_data()
+    print(json.dumps(result, indent=2))
