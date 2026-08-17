@@ -1,34 +1,30 @@
-class ValidationError(Exception):
-    pass
+def validate_input(data):
+    """
+    Validate the input data. It checks for required fields and basic data types.
+    """
+    required_fields = ['name', 'age', 'email']
+    errors = []
 
-def validate_positive_integer(value):
-    """Validates that the input is a positive integer."""
-    if not isinstance(value, int):
-        raise ValidationError(f'Expected integer, got {type(value).__name__}')
-    if value <= 0:
-        raise ValidationError('Value must be a positive integer')
-    return True
+    for field in required_fields:
+        if field not in data:
+            errors.append(f"Missing field: {field}")
 
-def validate_non_empty_string(value):
-    """Validates that the input is a non-empty string."""
-    if not isinstance(value, str):
-        raise ValidationError(f'Expected string, got {type(value).__name__}')
-    if not value:
-        raise ValidationError('String cannot be empty')
-    return True
+    if 'age' in data:
+        if not isinstance(data['age'], int) or data['age'] < 0:
+            errors.append("Invalid age: must be a non-negative integer")
 
-def validate_email(email):
-    """Validates that the input is a valid email format."""
-    import re
-    email_regex = r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$'
-    if not re.match(email_regex, email):
-        raise ValidationError('Invalid email format')
-    return True
+    if 'email' in data:
+        if not isinstance(data['email'], str) or '@' not in data['email']:
+            errors.append("Invalid email: must be a valid email address")
 
-# Example Usages:
-try:
-    validate_positive_integer(10)
-    validate_non_empty_string('Hello World')
-    validate_email('test@example.com')
-except ValidationError as e:
-    print(f'Validation error: {e}')
+    if errors:
+        raise ValueError("Input validation errors: " + ", ".join(errors))
+
+# Example usage
+if __name__ == '__main__':
+    input_data = {'name': 'John Doe', 'age': 30, 'email': 'john@example.com'}
+    try:
+        validate_input(input_data)
+        print("Input is valid.")
+    except ValueError as e:
+        print(e)
