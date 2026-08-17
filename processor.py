@@ -1,35 +1,31 @@
-import json
-import logging
+from typing import List, Dict, Any
 
-logging.basicConfig(level=logging.ERROR)
 
-class Processor:
-    def __init__(self, data):
-        self.data = data
+def process_data(data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Process a list of dictionaries and return processed data.
 
-    def process_data(self):
-        if not isinstance(self.data, list):
-            logging.error('Data is not a list')
-            return None
-        
-        processed = []
-        for item in self.data:
-            try:
-                if not isinstance(item, dict):
-                    raise ValueError('Item is not a dictionary')
-                processed.append(self._process_item(item))
-            except ValueError as e:
-                logging.error(f'ValueError: {e}')
-            except Exception as e:
-                logging.error(f'Unexpected error: {e}')
-        return processed
+    Args:
+        data (List[Dict[str, Any]]): A list of dictionaries to process.
 
-    def _process_item(self, item):
-        # Simulate processing item
-        return {k: v for k, v in item.items() if v is not None}
+    Returns:
+        List[Dict[str, Any]]: A list of processed dictionaries.
+    """
+    processed = []
+    for item in data:
+        processed_item = {key: value for key, value in item.items() if value is not None}
+        processed.append(processed_item)
+    return processed
 
-if __name__ == '__main__':
-    data = [{'key1': 'value1'}, {'key2': None}, 'not a dict', {'key3': 'value3'}]
-    processor = Processor(data)
-    result = processor.process_data()
-    print(json.dumps(result, indent=2))
+
+def filter_data(data: List[Dict[str, Any]], key: str, value: Any) -> List[Dict[str, Any]]:
+    """Filter data based on a key-value pair.
+
+    Args:
+        data (List[Dict[str, Any]]): A list of dictionaries to filter.
+        key (str): The key to check in each dictionary.
+        value (Any): The value that the key should match.
+
+    Returns:
+        List[Dict[str, Any]]: A list of dictionaries that match the filter criteria.
+    """
+    return [item for item in data if item.get(key) == value]
