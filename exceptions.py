@@ -1,26 +1,36 @@
 class CustomError(Exception):
-    """Base class for custom exceptions in this module."""
-    pass
+    """
+    Custom exception class for handling specific errors.
+    """
+    def __init__(self, message, errors=None):
+        super().__init__(message)
+        self.errors = errors
 
-class DataNotFoundError(CustomError):
-    """Exception raised when expected data is not found."""
-    def __init__(self, message='Data not found.'):  
-        self.message = message
-        super().__init__(self.message)
+class ValidationError(CustomError):
+    """
+    Exception raised for validation errors.
+    """
+    def __init__(self, message, field):
+        super().__init__(message)
+        self.field = field
 
-class InvalidDataError(CustomError):
-    """Exception raised for invalid data types or values."""
-    def __init__(self, data, expected_type):
-        self.message = f'Invalid data: {data}. Expected type: {expected_type}'
-        super().__init__(self.message)
+class NotFoundError(CustomError):
+    """
+    Exception raised when an item is not found.
+    """
+    def __init__(self, message):
+        super().__init__(message)
 
-class DatabaseConnectionError(CustomError):
-    """Exception raised for errors related to database connections."""
-    def __init__(self, message='Could not connect to the database.'):  
-        self.message = message
-        super().__init__(self.message)
+class AuthenticationError(CustomError):
+    """
+    Exception raised for authentication failures.
+    """
+    def __init__(self, message):
+        super().__init__(message)
 
-# Example usage:
-# raise DataNotFoundError()
-# raise InvalidDataError(data='abc', expected_type='int')
-# raise DatabaseConnectionError()
+class PermissionDeniedError(CustomError):
+    """
+    Exception raised for permission related errors.
+    """
+    def __init__(self, message):
+        super().__init__(message)
