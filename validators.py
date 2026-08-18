@@ -1,30 +1,35 @@
-def validate_input(data):
-    """
-    Validate the input data. It checks for required fields and basic data types.
-    """
-    required_fields = ['name', 'age', 'email']
-    errors = []
+import re
 
-    for field in required_fields:
-        if field not in data:
-            errors.append(f"Missing field: {field}")
+def is_valid_email(email: str) -> bool:
+    """Check if the provided email is valid."""
+    email_regex = r'^[\w\.-]+@[\w\.-]+\.\w+$'
+    return re.match(email_regex, email) is not None
 
-    if 'age' in data:
-        if not isinstance(data['age'], int) or data['age'] < 0:
-            errors.append("Invalid age: must be a non-negative integer")
 
-    if 'email' in data:
-        if not isinstance(data['email'], str) or '@' not in data['email']:
-            errors.append("Invalid email: must be a valid email address")
+def is_valid_phone(phone: str) -> bool:
+    """Check if the provided phone number is valid."
+    phone_regex = r'^\+?\d{10,15}$'
+    return re.match(phone_regex, phone) is not None
 
-    if errors:
-        raise ValueError("Input validation errors: " + ", ".join(errors))
 
-# Example usage
+def validate_user_input(email: str, phone: str) -> tuple:
+    """Validate user email and phone number."
+    return is_valid_email(email), is_valid_phone(phone)
+
+
+def main():
+    email = input('Enter your email: ')
+    phone = input('Enter your phone number: ')
+    email_valid, phone_valid = validate_user_input(email, phone)
+    if email_valid:
+        print('Email is valid.')
+    else:
+        print('Email is invalid.')
+    if phone_valid:
+        print('Phone number is valid.')
+    else:
+        print('Phone number is invalid.')
+
+
 if __name__ == '__main__':
-    input_data = {'name': 'John Doe', 'age': 30, 'email': 'john@example.com'}
-    try:
-        validate_input(input_data)
-        print("Input is valid.")
-    except ValueError as e:
-        print(e)
+    main()
