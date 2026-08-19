@@ -1,33 +1,31 @@
 import json
+import os
 
 class ConfigLoader:
-    def __init__(self, default_config):
-        self.default_config = default_config
-        self.user_config = {}
+    def __init__(self, default_config_path, user_config_path):
+        self.default_config_path = default_config_path
+        self.user_config_path = user_config_path
+        self.config = self.load_config()
 
-    def load_from_file(self, file_path):
-        try:
+    def load_config(self):
+        default_config = self.load_json(self.default_config_path)
+        user_config = self.load_json(self.user_config_path)
+
+        # Override default configuration with user settings
+        if user_config:
+            default_config.update(user_config)
+        return default_config
+
+    def load_json(self, file_path):
+        if os.path.exists(file_path):
             with open(file_path, 'r') as file:
-                self.user_config = json.load(file)
-        except FileNotFoundError:
-            print(f"Configuration file not found: {file_path}")
-        except json.JSONDecodeError:
-            print(f"Error decoding JSON from the configuration file.")
+                return json.load(file)
+        return {}
 
-    def get_config(self):
-        # Merge user config with defaults, user config takes precedence
-        config = self.default_config.copy()
-        config.update(self.user_config)
-        return config
+    def get(self, key, default=None):
+        return self.config.get(key, default)
 
-# Example default configuration
 if __name__ == '__main__':
-    default_config = {
-        'host': 'localhost',
-        'port': 8080,
-        'debug': False
-    }
-    config_loader = ConfigLoader(default_config)
-    config_loader.load_from_file('config.json')
-    final_config = config_loader.get_config()
-    print(final_config)  # Should print the merged configuration
+    # Example usage
+    loader = ConfigLoader('default_config.json', 'user_config.json')
+    print(loader.get('some_setting', 'default_value'))
