@@ -10,22 +10,20 @@ class ConfigLoader:
     def load_config(self):
         default_config = self.load_json(self.default_config_path)
         user_config = self.load_json(self.user_config_path)
+        merged_config = {**default_config, **user_config}
+        return merged_config
 
-        # Override default configuration with user settings
-        if user_config:
-            default_config.update(user_config)
-        return default_config
-
-    def load_json(self, file_path):
-        if os.path.exists(file_path):
-            with open(file_path, 'r') as file:
-                return json.load(file)
-        return {}
+    def load_json(self, path):
+        if not os.path.exists(path):
+            return {}
+        with open(path, 'r') as file:
+            return json.load(file)
 
     def get(self, key, default=None):
         return self.config.get(key, default)
 
+# Example usage
 if __name__ == '__main__':
-    # Example usage
-    loader = ConfigLoader('default_config.json', 'user_config.json')
-    print(loader.get('some_setting', 'default_value'))
+    config_loader = ConfigLoader('default_config.json', 'user_config.json')
+    some_setting = config_loader.get('some_setting', 'default_value')
+    print(some_setting)
