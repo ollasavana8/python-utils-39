@@ -1,72 +1,60 @@
 import os
-from typing import List, Dict, Any, Optional
+import json
+from typing import Any, Dict, List, Optional, Union
 
-def read_text_file(filepath: str, encoding: str = 'utf-8') -> str:
-    """Read the entire content of a text file.
-    Args:
-        filepath: Path to the file to read.
-        encoding: Encoding to use (default utf-8).
-    Returns:
-        The file content as a string.
-    """
-    with open(filepath, 'r', encoding=encoding) as file:
-        return file.read()
+def read_json_file(filepath: str) -> Optional[Dict[str, Any]]:
+    """Read JSON from file, return None on error."""
+    if not os.path.isfile(filepath):
+        return None
+    try:
+        with open(filepath, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except (IOError, json.JSONDecodeError):
+        return None
 
-def write_text_file(filepath: str, content: str, encoding: str = 'utf-8') -> None:
-    """Write string content to a file.
-    Parent dirs created if missing.
-    Args:
-        filepath: Path to write to.
-        content: Text to write.
-        encoding: Encoding (default utf-8).
-    """
-    os.makedirs(os.path.dirname(filepath), exist_ok=True)
-    with open(filepath, 'w', encoding=encoding) as file:
-        file.write(content)
+def write_json_file(filepath: str, data: Dict[str, Any]) -> bool:
+    """Write data to JSON file, return success status."""
+    try:
+        os.makedirs(os.path.dirname(filepath) or '.', exist_ok=True)
+        with open(filepath, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=2)
+        return True
+    except Exception:
+        return False
 
-def merge_dicts(d1: Dict[str, Any], d2: Dict[str, Any]) -> Dict[str, Any]:
-    """Recursively merge d1 and d2.
-    d2 overrides d1 on conflicts.
-    Args:
-        d1: First dictionary.
-        d2: Second dictionary.
-    Returns:
-        The merged dict.
-    """
-    result = d1.copy()
-    for key, value in d2.items():
-        # check for nested dict to recurse
-        if (key in result and isinstance(result[key], dict) and isinstance(value, dict)):
-            result[key] = merge_dicts(result[key], value)
+def flatten_nested_list(nested: List[Any]) -> List[Any]:
+    """Flatten a list containing nested lists."""
+    result = []
+    for item in nested:
+        if isinstance(item, list):
+            result.extend(flatten_nested_list(item))
         else:
-            result[key] = value
+            result.append(item)
     return result
 
-def safe_divide(a: float, b: float) -> Optional[float]:
-    """Perform division or return None if divisor is zero.
-    Args:
-        a: Dividend.
-        b: Divisor.
-    Returns:
-        Result or None.
-    """
-    if b == 0:
-        return None
-    return a / b
+def get_value_from_dict(data: Dict[str, Any], path: str, default: Any = None) -> Any:
+    """Get nested value using dot notation path like 'a.b.c'."""
+    keys = path.split('.')
+    current = data
+    for key in keys:
+        if isinstance(current, dict) and key in current:
+            current = current[key]
+        else:
+            return default
+    return current
 
-def format_size(size_bytes: int) -> str:
-    """Format bytes to readable size string.
-    Args:
-        size_bytes: Number of bytes.
-    Returns:
-        String like '2.0 MB'.
-    """
-    if size_bytes == 0:
-        return '0 B'
-    units = ['B', 'KB', 'MB', 'GB', 'TB']
-    i = 0
-    # loop to find appropriate unit
-    while size_bytes >= 1024 and i < len(units)-1:
-        size_bytes /= 1024.0
-        i += 1
-    return f"{size_bytes:.1f} {units[i]}"
+def chunk_iterable(iterable: List[Any], chunk_size: int) -> List[List[Any]]:
+    """Split list into chunks of given size."""
+    if chunk_size < 1:
+        return [iterable]
+    return [iterable[i:i + chunk_size] for i in range(0, len(iterable), chunk_size)]
+
+
+def find_files_by_ext(directory: str, extension: str = '.txt') -> List[str]:
+    """Recursively find files with specific extension."""
+    matches = []
+    for root, dirs, files in os.walk(directory):
+        for filename in files:
+            if filename.endswith(extension):
+                matches.append(os.path.join(root, filename))
+    return matches
