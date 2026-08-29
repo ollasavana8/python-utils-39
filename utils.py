@@ -1,60 +1,77 @@
-import os
-import json
-from typing import Any, Dict, List, Optional, Union
+"""Utility functions for general data handling."""
 
-def read_json_file(filepath: str) -> Optional[Dict[str, Any]]:
-    """Read JSON from file, return None on error."""
-    if not os.path.isfile(filepath):
-        return None
-    try:
-        with open(filepath, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    except (IOError, json.JSONDecodeError):
-        return None
+import copy
 
-def write_json_file(filepath: str, data: Dict[str, Any]) -> bool:
-    """Write data to JSON file, return success status."""
-    try:
-        os.makedirs(os.path.dirname(filepath) or '.', exist_ok=True)
-        with open(filepath, 'w', encoding='utf-8') as f:
-            json.dump(data, f, indent=2)
-        return True
-    except Exception:
-        return False
+from typing import Any, Dict, List, Union
 
-def flatten_nested_list(nested: List[Any]) -> List[Any]:
-    """Flatten a list containing nested lists."""
-    result = []
-    for item in nested:
-        if isinstance(item, list):
-            result.extend(flatten_nested_list(item))
+def deep_merge_dicts(base: Dict[str, Any], update: Dict[str, Any]) -> Dict[str, Any]:
+    """Recursively merge two dictionaries.
+
+    Nested dictionaries are merged, other values overridden.
+    """
+    result = copy.deepcopy(base)
+    for key, value in update.items():
+        if key in result and isinstance(result[key], dict) and isinstance(value, dict):
+            result[key] = deep_merge_dicts(result[key], value)
         else:
-            result.append(item)
+            result[key] = copy.deepcopy(value)
     return result
 
-def get_value_from_dict(data: Dict[str, Any], path: str, default: Any = None) -> Any:
-    """Get nested value using dot notation path like 'a.b.c'."""
-    keys = path.split('.')
+def safe_get(data: Any, path: List[Union[str, int]], default: Any = None) -> Any:
+    """Safely retrieve value from nested structure.
+
+    Supports dicts and lists. Returns default on failure.
+    """
     current = data
-    for key in keys:
+    for key in path:
         if isinstance(current, dict) and key in current:
             current = current[key]
+        elif isinstance(current, (list, tuple)) and isinstance(key, int):
+            if 0 <= key < len(current):
+                current = current[key]
+            else:
+                return default
         else:
             return default
     return current
 
-def chunk_iterable(iterable: List[Any], chunk_size: int) -> List[List[Any]]:
-    """Split list into chunks of given size."""
+def flatten_dict(d: Dict[str, Any], parent_key: str = "", sep: str = ".") -> Dict[str, Any]:
+    """Flatten a nested dictionary.
+
+    Keys are joined with separator for nested levels.
+    """
+    items = []
+    for k, v in d.items():
+        new_key = f"{parent_key}{sep}{k}" if parent_key else k
+        if isinstance(v, dict):
+            items.extend(flatten_dict(v, new_key, sep).items())
+        else:
+            items.append((new_key, v))
+    return dict(items)
+
+def chunk_list(data: List[Any], chunk_size: int) -> List[List[Any]]:
+    """Divide a list into smaller chunks.
+
+    Each chunk has at most chunk_size elements.
+    """
     if chunk_size < 1:
-        return [iterable]
-    return [iterable[i:i + chunk_size] for i in range(0, len(iterable), chunk_size)]
+        raise ValueError("chunk_size must be at least 1")
+    chunks = []
+    for i in range(0, len(data), chunk_size):
+        chunks.append(data[i:i + chunk_size])
+    return chunks
 
+def update_nested(data: Dict[str, Any], path: List[str], value: Any) -> Dict[str, Any]:
+    """Update a nested dictionary value.
 
-def find_files_by_ext(directory: str, extension: str = '.txt') -> List[str]:
-    """Recursively find files with specific extension."""
-    matches = []
-    for root, dirs, files in os.walk(directory):
-        for filename in files:
-            if filename.endswith(extension):
-                matches.append(os.path.join(root, filename))
-    return matches
+    Creates intermediate dicts if needed.
+    """
+    if not path:
+        return data
+    current = data
+    for key in path[:-1]:
+        if key not in current or not isinstance(current[key], dict):
+            current[key] = {}
+        current = current[key]
+    current[path[-1]] = value
+    return data
