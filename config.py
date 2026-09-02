@@ -1,80 +1,61 @@
-"""Configuration management module.
-
-This module provides a Config class for handling application settings
-with support for defaults, environment variables, and type safety.
-"""
-
+import json
 import os
-
 from typing import Any, Dict, Optional
 
-class Config:
-    """A configuration manager that stores settings in a dictionary.
-
-    Supports loading from environment variables and provides
-    type-annotated methods for getting and setting values.
-    """
+class ConfigLoader:
+    """A simple configuration loader that supports defaults, file loading, and environment variables."""
 
     def __init__(self, defaults: Optional[Dict[str, Any]] = None) -> None:
-        """Initialize the configuration with optional default values.
+        # Initialize with defaults
+        self._config: Dict[str, Any] = defaults.copy() if defaults else {}
 
-        Args:
-            defaults: A dictionary of default configuration values.
-        """
-        self._config: Dict[str, Any] = dict(defaults) if defaults is not None else {}
+    def load_from_json(self, filepath: str) -> None:
+        """Load configuration from a JSON file, overriding defaults."""
+        if os.path.exists(filepath):
+            with open(filepath, "r", encoding="utf-8") as f:
+                file_config = json.load(f)
+                self._config.update(file_config)
+        # No error if file missing, just use defaults
+
+    def load_from_env(self, prefix: str = "CONFIG_") -> None:
+        """Load configuration from environment variables with given prefix."""
+        for key, value in os.environ.items():
+            if key.startswith(prefix):
+                config_key = key[len(prefix):].lower()
+                # Try to convert to int or bool if possible
+                if value.lower() in ("true", "false"):
+                    self._config[config_key] = value.lower() == "true"
+                else:
+                    try:
+                        self._config[config_key] = int(value)
+                    except ValueError:
+                        self._config[config_key] = value
 
     def get(self, key: str, default: Any = None) -> Any:
-        """Retrieve a value from the configuration.
-
-        Args:
-            key: The key to look up in the configuration.
-            default: The value to return if the key is not found.
-        Returns:
-            The value associated with the key or the default.
-        """
+        """Get a config value, falling back to provided default."""
         return self._config.get(key, default)
 
     def set(self, key: str, value: Any) -> None:
-        """Set a value in the configuration.
-
-        Args:
-            key: The key to set.
-            value: The value to associate with the key.
-        """
+        """Set a config value."""
         self._config[key] = value
 
-    def load_from_env(self, prefix: str = "APP_") -> None:
-        """Load configuration values from environment variables.
-
-        Only variables starting with the given prefix are loaded,
-        and the prefix is stripped before storing.
-
-        Args:
-            prefix: The prefix for environment variables to consider.
-        """
-        for env_key, env_value in os.environ.items():
-            if env_key.startswith(prefix):
-                config_key = env_key[len(prefix):].lower()
-                # Attempt basic type conversion for common values
-                if env_value.lower() in ('true', 'false'):
-                    self._config[config_key] = env_value.lower() == 'true'
-                elif env_value.isdigit():
-                    self._config[config_key] = int(env_value)
-                else:
-                    self._config[config_key] = env_value
-
-    def update(self, updates: Dict[str, Any]) -> None:
-        """Update multiple configuration values at once.
-
-        Args:
-            updates: A dictionary of key-value pairs to update.
-        """
-        self._config.update(updates)
-
-    def to_dict(self) -> Dict[str, Any]:
-        """Return a copy of the current configuration as a dictionary.
-
-        Returns:
-            A shallow copy of the internal configuration dictionary.
-        """
+    def get_all(self) -> Dict[str, Any]:
+        """Return a copy of all configuration values."""
         return self._config.copy()
+
+# Example usage at the end for testing
+if __name__ == "__main__":
+    defaults = {
+        "debug": False,
+        "port": 8000,
+        "host": "0.0.0.0",
+        "log_level": "INFO"
+    }
+    config = ConfigLoader(defaults)
+    # Load from file if exists (example)
+    config.load_from_json("app_config.json")
+    # Load from env, e.g. CONFIG_PORT=9000
+    config.load_from_env()
+    print("Debug mode:", config.get("debug"))
+    print("Port:", config.get("port"))
+    print("All config:", config.get_all())
