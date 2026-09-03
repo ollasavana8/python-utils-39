@@ -1,31 +1,37 @@
-from typing import List, Dict, Any
+import logging
+from typing import Any, List, Dict
 
+logger = logging.getLogger(__name__)
 
-def process_data(data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    """Process a list of dictionaries and return processed data.
+class DataProcessor:
+    """Handles data normalization and cleanup tasks."""
 
-    Args:
-        data (List[Dict[str, Any]]): A list of dictionaries to process.
+    def __init__(self, settings: Dict[str, Any] = None):
+        self.settings = settings or {}
+        self.verbose = self.settings.get("verbose", False)
 
-    Returns:
-        List[Dict[str, Any]]: A list of processed dictionaries.
-    """
-    processed = []
-    for item in data:
-        processed_item = {key: value for key, value in item.items() if value is not None}
-        processed.append(processed_item)
-    return processed
+    def normalize_batch(self, data_items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Cleans dictionary keys and strips whitespace values."""
+        cleaned_data = []
+        for entry in data_items:
+            if not isinstance(entry, dict):
+                continue
+            
+            processed = {
+                str(k).strip().lower(): str(v).strip() if isinstance(v, str) else v
+                for k, v in entry.items()
+            }
+            cleaned_data.append(processed)
+        
+        if self.verbose:
+            logger.info(f"Processed {len(cleaned_data)} items")
+        return cleaned_data
 
+    def filter_nulls(self, data_items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Removes entries containing empty values."""
+        return [item for item in data_items if all(item.values())]
 
-def filter_data(data: List[Dict[str, Any]], key: str, value: Any) -> List[Dict[str, Any]]:
-    """Filter data based on a key-value pair.
-
-    Args:
-        data (List[Dict[str, Any]]): A list of dictionaries to filter.
-        key (str): The key to check in each dictionary.
-        value (Any): The value that the key should match.
-
-    Returns:
-        List[Dict[str, Any]]: A list of dictionaries that match the filter criteria.
-    """
-    return [item for item in data if item.get(key) == value]
+    def execute_pipeline(self, raw_data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Orchestrates normalization and filtering sequence."""
+        normalized = self.normalize_batch(raw_data)
+        return self.filter_nulls(normalized)
