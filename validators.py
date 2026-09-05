@@ -1,35 +1,24 @@
-import re
+from typing import Any, Optional
 
-def is_valid_email(email: str) -> bool:
-    """Check if the provided email is valid."""
-    email_regex = r'^[\w\.-]+@[\w\.-]+\.\w+$'
-    return re.match(email_regex, email) is not None
+def validate_email(email: Any) -> bool:
+    """Check if the provided input is a valid email string format."""
+    if not isinstance(email, str):
+        return False
+    return "@" in email and "." in email.split("@")[-1]
 
+def validate_range(value: int, min_val: int, max_val: int) -> bool:
+    """Verify that an integer falls within a specified inclusive range."""
+    return min_val <= value <= max_val
 
-def is_valid_phone(phone: str) -> bool:
-    """Check if the provided phone number is valid."
-    phone_regex = r'^\+?\d{10,15}$'
-    return re.match(phone_regex, phone) is not None
+def sanitize_input(value: Optional[str]) -> str:
+    """Remove whitespace and return empty string if input is None."""
+    if value is None:
+        return ""
+    return value.strip()
 
-
-def validate_user_input(email: str, phone: str) -> tuple:
-    """Validate user email and phone number."
-    return is_valid_email(email), is_valid_phone(phone)
-
-
-def main():
-    email = input('Enter your email: ')
-    phone = input('Enter your phone number: ')
-    email_valid, phone_valid = validate_user_input(email, phone)
-    if email_valid:
-        print('Email is valid.')
-    else:
-        print('Email is invalid.')
-    if phone_valid:
-        print('Phone number is valid.')
-    else:
-        print('Phone number is invalid.')
-
-
-if __name__ == '__main__':
-    main()
+def is_not_empty(data: Any) -> bool:
+    """Return true if the object has a length greater than zero."""
+    try:
+        return len(data) > 0
+    except TypeError:
+        return False
