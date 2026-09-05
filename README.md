@@ -1,41 +1,50 @@
 # python-utils-39
 
-A collection of Python utility functions designed to enhance productivity and make scripting tasks easier. Whether you're working with data processing, file handling, or string manipulation, python-utils-39 streamlines common operations with minimal setup.
+A collection of lightweight, high-performance utility functions designed to streamline repetitive tasks in Python 3.9+ projects. This library focuses on type-hinted, dependency-free code to keep your production environment lean and efficient.
+
+![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)
 
 ## Features
-- **Data Processing Utilities**: Efficiently manipulate lists and dictionaries for quick data transformations without boilerplate code.
-- **File Handling Functions**: Simplify read/write operations with robust methods that support various file formats, including JSON and CSV.
-- **String Manipulation Tools**: Comprehensive functions to sanitize, format, and validate strings, perfect for preparing user inputs.
-- **Customizable Logging**: Built-in logging mechanisms for easy tracking of application behavior during development and debugging.
+
+*   **Data Validation Helpers**: Pre-built decorators and functions for rapid schema validation without the overhead of heavy frameworks like Pydantic.
+*   **File System Traversals**: Optimized context managers for recursive directory walking and batch file renaming.
+*   **Performance Decorators**: Built-in `@timeit` and `@memoize` wrappers to instantly profile or cache resource-intensive function calls.
+*   **String Sanitization**: Robust utility suite for slugifying, normalizing, and stripping sensitive data from user inputs.
 
 ## Installation
 
-To install python-utils-39, simply clone the repository and install the necessary dependencies:
+Install the package directly from PyPI using pip:
 
 ```bash
-git clone https://github.com/yourusername/python-utils-39.git
-cd python-utils-39
+pip install python-utils-39
+```
+
+Alternatively, if you are working within a virtual environment, ensure your requirements file is updated:
+
+```bash
+echo "python-utils-39>=1.0.0" >> requirements.txt
 pip install -r requirements.txt
 ```
 
-## Basic Usage Example
+## Basic Usage
 
-Here's a quick demonstration of how to utilize some of the features of python-utils-39:
+Quickly profile your functions or handle complex path operations with minimal boilerplate:
 
 ```python
-from utils import file_handler, string_utils
+from pyutils39.decorators import timeit
+from pyutils39.fs import ensure_dir
 
-# Read a JSON file
-data = file_handler.read_json('data.json')
+# Automatically profile function execution time
+@timeit
+def process_data(data):
+    return [d * 2 for d in data]
 
-# Sanitize a string
-clean_string = string_utils.sanitize("   Hello, World!  ")
+# Safely create nested directories if they don't exist
+ensure_dir("./logs/2023/october")
 
-# Print results
-print(clean_string)  # Output: "Hello, World!"
-print(data)          # Output: Content of data.json
+data = process_data([1, 2, 3, 4, 5])
 ```
 
-For more detailed examples and advanced usage, please refer to the [Wiki](https://github.com/yourusername/python-utils-39/wiki).
+## License
 
-![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)
+Distributed under the MIT License. See `LICENSE` for more information.
