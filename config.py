@@ -1,49 +1,33 @@
 import json
 import os
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 class ConfigLoader:
-    """A configuration loader that merges file data with defaults."""
+    """Utility for loading JSON configurations with fallback defaults."""
 
-    def __init__(self, defaults: Optional[Dict[str, Any]] = None) -> None:
-        """Initialize with optional defaults dictionary."""
-        self.defaults: Dict[str, Any] = defaults or {}
-        self.config: Dict[str, Any] = {}
+    def __init__(self, defaults: Dict[str, Any]):
+        self.defaults = defaults
 
-    def load_from_file(self, filepath: str) -> None:
-        """Load configuration from a JSON file, falling back to defaults."""
-        if os.path.exists(filepath):
-            try:
-                with open(filepath, 'r', encoding='utf-8') as file:
-                    data = json.load(file)
-                    if isinstance(data, dict):
-                        self.config.update(data)
-            except (json.JSONDecodeError, IOError, OSError):
-                pass  # Ignore errors, use defaults
-        self._merge_defaults()
+    def load(self, filepath: str) -> Dict[str, Any]:
+        """Reads config file and merges with default values."""
+        config = self.defaults.copy()
+        
+        if not os.path.exists(filepath):
+            return config
 
-    def _merge_defaults(self) -> None:
-        """Merge defaults into config for missing keys."""
-        for key, value in self.defaults.items():
-            if key not in self.config:
-                self.config[key] = value
-
-    def get(self, key: str, default: Any = None) -> Any:
-        """Get a value by key, using provided default if missing."""
-        return self.config.get(key, default)
-
-    def set(self, key: str, value: Any) -> None:
-        """Set a configuration value."""
-        self.config[key] = value
-
-    def to_dict(self) -> Dict[str, Any]:
-        """Return a copy of the current configuration."""
-        return self.config.copy()
-
-    def save_to_file(self, filepath: str) -> None:
-        """Save current config to a JSON file."""
         try:
-            with open(filepath, 'w', encoding='utf-8') as file:
-                json.dump(self.config, file, indent=2)
-        except (IOError, OSError):
-            pass  # Silently fail on save errors
+            with open(filepath, 'r') as f:
+                user_config = json.load(f)
+                config.update(user_config)
+        except (json.JSONDecodeError, IOError):
+            # Returns defaults if file is corrupted or unreadable
+            pass
+            
+        return config
+
+# Example usage:
+if __name__ == '__main__':
+    defaults = {'host': 'localhost', 'port': 8080, 'debug': False}
+    loader = ConfigLoader(defaults)
+    current_config = loader.load('config.json')
+    print(f"Active configuration: {current_config}")
