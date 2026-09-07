@@ -9,25 +9,24 @@ class ConfigLoader:
         self.defaults = defaults
 
     def load(self, filepath: str) -> Dict[str, Any]:
-        """Reads config file and merges with default values."""
-        config = self.defaults.copy()
-        
+        """Load config from file or return defaults if missing."""
         if not os.path.exists(filepath):
-            return config
+            return self.defaults
 
         try:
             with open(filepath, 'r') as f:
-                user_config = json.load(f)
-                config.update(user_config)
+                data = json.load(f)
+                return {**self.defaults, **data}
         except (json.JSONDecodeError, IOError):
-            # Returns defaults if file is corrupted or unreadable
-            pass
-            
-        return config
+            return self.defaults
 
-# Example usage:
-if __name__ == '__main__':
-    defaults = {'host': 'localhost', 'port': 8080, 'debug': False}
+def get_config(filepath: str, defaults: Dict[str, Any]) -> Dict[str, Any]:
+    """Functional interface for configuration loading."""
     loader = ConfigLoader(defaults)
-    current_config = loader.load('config.json')
-    print(f"Active configuration: {current_config}")
+    return loader.load(filepath)
+
+if __name__ == '__main__':
+    # Example usage for demonstration
+    default_settings = {"host": "localhost", "port": 8080}
+    settings = get_config("config.json", default_settings)
+    print(f"Loaded settings: {settings}")
