@@ -1,37 +1,32 @@
 import logging
-from typing import Any, List, Dict
 
+# Configure logger for module tracking
 logger = logging.getLogger(__name__)
 
-class DataProcessor:
-    """Handles data normalization and cleanup tasks."""
+def validate_input(data):
+    """Ensures input is a non-empty dictionary."""
+    if not isinstance(data, dict):
+        raise ValueError("Input must be a dictionary")
+    if not data:
+        raise ValueError("Input data cannot be empty")
+    return True
 
-    def __init__(self, settings: Dict[str, Any] = None):
-        self.settings = settings or {}
-        self.verbose = self.settings.get("verbose", False)
+def process_data_stream(stream):
+    """
+    Processes incoming data stream with validation
+    for each record to ensure data integrity.
+    """
+    for record in stream:
+        try:
+            if validate_input(record):
+                # Perform core processing logic here
+                result = record.get("value", 0) * 2
+                logger.info(f"Processed record with result: {result}")
+        except (ValueError, TypeError) as e:
+            logger.error(f"Skipping invalid record: {e}")
+            continue
 
-    def normalize_batch(self, data_items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Cleans dictionary keys and strips whitespace values."""
-        cleaned_data = []
-        for entry in data_items:
-            if not isinstance(entry, dict):
-                continue
-            
-            processed = {
-                str(k).strip().lower(): str(v).strip() if isinstance(v, str) else v
-                for k, v in entry.items()
-            }
-            cleaned_data.append(processed)
-        
-        if self.verbose:
-            logger.info(f"Processed {len(cleaned_data)} items")
-        return cleaned_data
-
-    def filter_nulls(self, data_items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Removes entries containing empty values."""
-        return [item for item in data_items if all(item.values())]
-
-    def execute_pipeline(self, raw_data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Orchestrates normalization and filtering sequence."""
-        normalized = self.normalize_batch(raw_data)
-        return self.filter_nulls(normalized)
+if __name__ == "__main__":
+    # Example usage for verification
+    sample_stream = [{"value": 10}, {}, "invalid_type", {"value": 5}]
+    process_data_stream(sample_stream)
