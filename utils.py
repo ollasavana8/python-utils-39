@@ -1,27 +1,37 @@
-import os
-from typing import Any, List, Optional
-from pathlib import Path
+import functools
+import time
+from typing import Callable, Any, Dict
 
-def ensure_directory(path: str) -> None:
-    """Creates a directory if it does not exist."""
-    target = Path(path)
-    target.mkdir(parents=True, exist_ok=True)
+# Cache for function results to reduce redundant computation
+_memoization_cache: Dict[tuple, Any] = {}
 
-def sanitize_filename(filename: str) -> str:
-    """Removes problematic characters from strings for filenames."""
-    return "".join(c for c in filename if c.isalnum() or c in (' ', '.', '_')).strip()
+def memoize(func: Callable) -> Callable:
+    """Decorator for caching function return values."""
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs) -> Any:
+        key = (func.__name__, args, frozenset(kwargs.items()))
+        if key not in _memoization_cache:
+            _memoization_cache[key] = func(*args, **kwargs)
+        return _memoization_cache[key]
+    return wrapper
 
-def get_environment_variable(key: str, default: Any = None) -> Optional[str]:
-    """Retrieves environment variable with fallback."""
-    return os.environ.get(key, default)
+def batch_process(data: list, chunk_size: int = 100):
+    """Generator to yield chunks for memory-efficient iteration."""
+    for i in range(0, len(data), chunk_size):
+        yield data[i:i + chunk_size]
 
-def list_files_by_extension(directory: str, extension: str) -> List[str]:
-    """Filters directory contents by file extension."""
-    path = Path(directory)
-    if not path.is_dir():
-        return []
-    return [f.name for f in path.iterdir() if f.suffix == extension]
+def timed_execution(func: Callable) -> Callable:
+    """Decorator for monitoring execution performance."""
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs) -> Any:
+        start_time = time.perf_counter()
+        result = func(*args, **kwargs)
+        end_time = time.perf_counter()
+        print(f"DEBUG: {func.__name__} executed in {end_time - start_time:.4f}s")
+        return result
+    return wrapper
 
-def chunk_list(data: List[Any], size: int) -> List[List[Any]]:
-    """Splits a list into smaller chunks of defined size."""
-    return [data[i:i + size] for i in range(0, len(data), size)]
+# Global cleanup function for memory management
+def clear_cache() -> None:
+    """Flushes the memoization cache."""
+    _memoization_cache.clear()
