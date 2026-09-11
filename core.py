@@ -1,38 +1,46 @@
-import functools
-import time
-from typing import Callable, Any, Dict
+from typing import Any, Dict, List, Optional, Callable
 
-# Cache for computed results to avoid redundant operations
-_memoization_cache: Dict[tuple, Any] = {}
+def batch_process(items: List[Any], func: Callable[[Any], Any]) -> List[Any]:
+    """
+    Applies a function to a list of items and returns the results.
 
-def memoize(func: Callable) -> Callable:
-    """Decorator to cache function calls with result expiration."""
-    @functools.wraps(func)
-    def wrapper(*args, **kwargs) -> Any:
-        key = (func.__name__, args, frozenset(kwargs.items()))
-        if key not in _memoization_cache:
-            _memoization_cache[key] = func(*args, **kwargs)
-        return _memoization_cache[key]
-    return wrapper
+    Args:
+        items: A list of arbitrary elements to process.
+        func: A callable function to apply to each item.
 
-def batch_process(data: list, chunk_size: int = 100):
-    """Memory-efficient generator for processing large lists."""
-    for i in range(0, len(data), chunk_size):
-        yield data[i:i + chunk_size]
+    Returns:
+        A list of processed items.
+    """
+    return [func(item) for item in items]
 
-class PerformanceOptimizer:
-    """Utility class for routine performance measurement."""
-    @staticmethod
-    def time_execution(func: Callable) -> Callable:
-        @functools.wraps(func)
-        def wrapper(*args, **kwargs):
-            start = time.perf_counter()
-            result = func(*args, **kwargs)
-            duration = time.perf_counter() - start
-            print(f"Execution of {func.__name__} took {duration:.4f}s")
-            return result
-        return wrapper
+def merge_configs(base: Dict[str, Any], override: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    """
+    Merges an override dictionary into a base configuration dictionary.
 
-def clear_cache() -> None:
-    """Flush global memoization storage."""
-    _memoization_cache.clear()
+    Args:
+        base: The default configuration dictionary.
+        override: An optional dictionary containing override values.
+
+    Returns:
+        A new dictionary with merged configuration values.
+    """
+    if not override:
+        return base.copy()
+    
+    result = base.copy()
+    result.update(override)
+    return result
+
+def get_safe(data: Dict[str, Any], key: str, default: Any = None) -> Any:
+    """
+    Retrieves a value from a dictionary safely.
+
+    Args:
+        data: The dictionary to search.
+        key: The key to retrieve.
+        default: The fallback value if key is missing.
+
+    Returns:
+        The value associated with the key or the default.
+    """
+    return data.get(key, default)
