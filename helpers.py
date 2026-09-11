@@ -1,49 +1,41 @@
-import logging
-from typing import Any, Optional, Callable
+import json
+import math
+from typing import Any, Generator, Iterable
 
-logger = logging.getLogger(__name__)
 
-def safe_execute(func: Callable, *args: Any, default: Any = None, **kwargs: Any) -> Any:
-    """
-    Executes a function safely with error catching for common edge cases.
-    """
-    try:
-        return func(*args, **kwargs)
-    except (ValueError, TypeError, AttributeError) as e:
-        logger.error(f"Data validation error in {func.__name__}: {e}")
+def chunk_iterable(iterable: Iterable[Any], size: int) -> Generator[list[Any], None, None]:
+    """Yield successive n-sized chunks from an iterable."""
+    if size <= 0:
+        raise ValueError("Chunk size must be greater than zero.")
+    chunk = []
+    for item in iterable:
+        chunk.append(item)
+        if len(chunk) == size:
+            yield chunk
+            chunk = []
+    if chunk:
+        yield chunk
+
+
+def format_bytes(size_bytes: int) -> str:
+    """Format bytes into a human-readable string (KB, MB, GB, etc.)."""
+    if size_bytes < 0:
+        raise ValueError("Size cannot be negative.")
+    if size_bytes == 0:
+        return "0 B"
+    power = int(math.floor(math.log(size_bytes, 1024)))
+    units = ["B", "KB", "MB", "GB", "TB", "PB"]
+    if power >= len(units):
+        power = len(units) - 1
+    scaled_size = size_bytes / math.pow(1024, power)
+    return f"{scaled_size:.2f} {units[power]}"
+
+
+def safe_json_load(json_str: str, default: Any = None) -> Any:
+    """Safely parse a JSON string, returning a default value on failure."""
+    if not json_str:
         return default
-    except Exception as e:
-        logger.critical(f"Unexpected system failure in {func.__name__}: {e}", exc_info=True)
-        return default
-
-def validate_input(data: Any, expected_type: type) -> bool:
-    """
-    Validates input type and handles empty edge cases.
-    """
-    if data is None:
-        return False
-    return isinstance(data, expected_type)
-
-def format_data_safely(data: Any) -> str:
-    """
-    Safely stringifies inputs avoiding attribute access errors.
-    """
-    if data is None:
-        return ""
     try:
-        return str(data)
-    except Exception:
-        return "[Unparseable Data]"
-
-def get_dict_path(data: dict, path: str, default: Any = None) -> Any:
-    """
-    Accesses nested dictionary keys safely without KeyError.
-    """
-    try:
-        keys = path.split('.')
-        val = data
-        for key in keys:
-            val = val[key]
-        return val
-    except (KeyError, TypeError, AttributeError):
+        return json.loads(json_str)
+    except (json.JSONDecodeError, TypeError):
         return default
