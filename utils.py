@@ -1,37 +1,29 @@
-import functools
 import time
-from typing import Callable, Any, Dict
+import functools
+import logging
 
-# Cache for function results to reduce redundant computation
-_memoization_cache: Dict[tuple, Any] = {}
+logger = logging.getLogger(__name__)
 
-def memoize(func: Callable) -> Callable:
-    """Decorator for caching function return values."""
-    @functools.wraps(func)
-    def wrapper(*args, **kwargs) -> Any:
-        key = (func.__name__, args, frozenset(kwargs.items()))
-        if key not in _memoization_cache:
-            _memoization_cache[key] = func(*args, **kwargs)
-        return _memoization_cache[key]
-    return wrapper
-
-def batch_process(data: list, chunk_size: int = 100):
-    """Generator to yield chunks for memory-efficient iteration."""
-    for i in range(0, len(data), chunk_size):
-        yield data[i:i + chunk_size]
-
-def timed_execution(func: Callable) -> Callable:
-    """Decorator for monitoring execution performance."""
-    @functools.wraps(func)
-    def wrapper(*args, **kwargs) -> Any:
-        start_time = time.perf_counter()
-        result = func(*args, **kwargs)
-        end_time = time.perf_counter()
-        print(f"DEBUG: {func.__name__} executed in {end_time - start_time:.4f}s")
-        return result
-    return wrapper
-
-# Global cleanup function for memory management
-def clear_cache() -> None:
-    """Flushes the memoization cache."""
-    _memoization_cache.clear()
+def retry(max_attempts=3, delay=1, backoff=2, exceptions=(Exception,)):
+    """Decorator for retrying functions on specific exceptions."""
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            attempts = 0
+            current_delay = delay
+            
+            while attempts < max_attempts:
+                try:
+                    return func(*args, **kwargs)
+                except exceptions as e:
+                    attempts += 1
+                    if attempts >= max_attempts:
+                        logger.error(f"Final attempt failed for {func.__name__}: {e}")
+                        raise
+                    
+                    logger.warning(f"Attempt {attempts} failed, retrying in {current_delay}s...")
+                    time.sleep(current_delay)
+                    current_delay *= backoff
+            return func(*args, **kwargs)
+        return wrapper
+    return decorator
