@@ -1,41 +1,39 @@
-import json
-import math
-from typing import Any, Generator, Iterable
+from typing import Any, Dict, List
 
 
-def chunk_iterable(iterable: Iterable[Any], size: int) -> Generator[list[Any], None, None]:
-    """Yield successive n-sized chunks from an iterable."""
-    if size <= 0:
-        raise ValueError("Chunk size must be greater than zero.")
-    chunk = []
-    for item in iterable:
-        chunk.append(item)
-        if len(chunk) == size:
-            yield chunk
-            chunk = []
-    if chunk:
-        yield chunk
+def validate_input(data: Dict[str, Any]) -> bool:
+    """Validate incoming task payload structure and required fields."""
+    if not isinstance(data, dict):
+        return False
+
+    required_keys = ["id", "action", "payload"]
+    if not all(key in data for key in required_keys):
+        return False
+
+    if not isinstance(data["id"], (int, str)) or not data["id"]:
+        return False
+
+    if not isinstance(data["action"], str) or not data["action"].strip():
+        return False
+
+    return True
 
 
-def format_bytes(size_bytes: int) -> str:
-    """Format bytes into a human-readable string (KB, MB, GB, etc.)."""
-    if size_bytes < 0:
-        raise ValueError("Size cannot be negative.")
-    if size_bytes == 0:
-        return "0 B"
-    power = int(math.floor(math.log(size_bytes, 1024)))
-    units = ["B", "KB", "MB", "GB", "TB", "PB"]
-    if power >= len(units):
-        power = len(units) - 1
-    scaled_size = size_bytes / math.pow(1024, power)
-    return f"{scaled_size:.2f} {units[power]}"
+def process_batch(items: List[Dict[str, Any]]) -> Dict[str, List[Any]]:
+    """Process a batch of input items with validation in the loop."""
+    successful: List[Dict[str, Any]] = []
+    failed: List[Dict[str, Any]] = []
 
+    for item in items:
+        if not validate_input(item):
+            failed.append({"item": item, "reason": "invalid_structure"})
+            continue
 
-def safe_json_load(json_str: str, default: Any = None) -> Any:
-    """Safely parse a JSON string, returning a default value on failure."""
-    if not json_str:
-        return default
-    try:
-        return json.loads(json_str)
-    except (json.JSONDecodeError, TypeError):
-        return default
+        result = {
+            "id": item["id"],
+            "status": "processed",
+            "action": item["action"].strip().lower(),
+        }
+        successful.append(result)
+
+    return {"successful": successful, "failed": failed}
