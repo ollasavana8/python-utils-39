@@ -3,31 +3,32 @@ import sys
 from typing import Optional
 
 def setup_logger(name: str, level: int = logging.INFO) -> logging.Logger:
-    """Configures a logger instance with robust error handling."""
+    """Configures a robust logger with basic error handling."""
     logger = logging.getLogger(name)
-    
-    try:
-        if not logger.handlers:
+    logger.setLevel(level)
+
+    if not logger.handlers:
+        try:
             handler = logging.StreamHandler(sys.stdout)
             formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
             handler.setFormatter(formatter)
             logger.addHandler(handler)
-            logger.setLevel(level)
-    except (OSError, ValueError) as e:
-        # Fallback to null handler if stream is unavailable
-        logger.addHandler(logging.NullHandler())
-        print(f"Critical failure initializing logger: {e}", file=sys.stderr)
-        
+        except Exception as e:
+            sys.stderr.write(f"critical failure initializing logger: {e}\n")
+    
     return logger
 
-def log_safe(logger: logging.Logger, level: int, message: str, exc_info: bool = False) -> None:
-    """Ensures log operations do not crash the application."""
+def safe_log(logger: logging.Logger, message: str, level: int = logging.INFO) -> None:
+    """Logs messages safely, handling potential encoding issues."""
     try:
-        if logger and callable(getattr(logger, 'log', None)):
-            logger.log(level, message, exc_info=exc_info)
-    except Exception:
-        # Silence logger errors to prevent cascading application failures
-        pass
+        if not isinstance(message, str):
+            message = str(message)
+        logger.log(level, message)
+    except (UnicodeEncodeError, AttributeError) as e:
+        sys.stderr.write(f"failed to log message: {str(e)}\n")
 
-# Default instance for quick access
-app_logger = setup_logger('python-utils-39')
+def get_logger_context(name: Optional[str]) -> logging.Logger:
+    """Returns default logger if name is invalid."""
+    if not name or not isinstance(name, str):
+        return setup_logger("default_logger")
+    return setup_logger(name)
