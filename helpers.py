@@ -1,39 +1,28 @@
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Generator
 
+def deep_merge(dict1: Dict[str, Any], dict2: Dict[str, Any]) -> Dict[str, Any]:
+    '''Recursively merges dict2 into dict1.'''
+    result = dict1.copy()
+    for key, value in dict2.items():
+        if key in result and isinstance(result[key], dict) and isinstance(value, dict):
+            result[key] = deep_merge(result[key], value)
+        else:
+            result[key] = value
+    return result
 
-def validate_input(data: Dict[str, Any]) -> bool:
-    """Validate incoming task payload structure and required fields."""
-    if not isinstance(data, dict):
-        return False
+def nested_get(dictionary: Dict[str, Any], keys: List[str], default: Any = None) -> Any:
+    '''Safely retrieves a value from a nested dictionary using a list of keys.'''
+    current = dictionary
+    for key in keys:
+        if isinstance(current, dict) and key in current:
+            current = current[key]
+        else:
+            return default
+    return current
 
-    required_keys = ["id", "action", "payload"]
-    if not all(key in data for key in required_keys):
-        return False
-
-    if not isinstance(data["id"], (int, str)) or not data["id"]:
-        return False
-
-    if not isinstance(data["action"], str) or not data["action"].strip():
-        return False
-
-    return True
-
-
-def process_batch(items: List[Dict[str, Any]]) -> Dict[str, List[Any]]:
-    """Process a batch of input items with validation in the loop."""
-    successful: List[Dict[str, Any]] = []
-    failed: List[Dict[str, Any]] = []
-
-    for item in items:
-        if not validate_input(item):
-            failed.append({"item": item, "reason": "invalid_structure"})
-            continue
-
-        result = {
-            "id": item["id"],
-            "status": "processed",
-            "action": item["action"].strip().lower(),
-        }
-        successful.append(result)
-
-    return {"successful": successful, "failed": failed}
+def chunk_list(lst: List[Any], chunk_size: int) -> Generator[List[Any], None, None]:
+    '''Yields successive n-sized chunks from a list.'''
+    if chunk_size <= 0:
+        raise ValueError("Chunk size must be greater than zero.")
+    for i in range(0, len(lst), chunk_size):
+        yield lst[i : i + chunk_size]
