@@ -1,46 +1,29 @@
-from typing import Any, Dict, List, Optional, Callable
+import logging
+from typing import Any, Optional, Callable
 
-def batch_process(items: List[Any], func: Callable[[Any], Any]) -> List[Any]:
-    """
-    Applies a function to a list of items and returns the results.
+logger = logging.getLogger(__name__)
 
-    Args:
-        items: A list of arbitrary elements to process.
-        func: A callable function to apply to each item.
+def safe_execute(func: Callable, *args: Any, default: Any = None, **kwargs: Any) -> Any:
+    """Executes a function safely with granular exception handling."""
+    try:
+        return func(*args, **kwargs)
+    except TypeError as e:
+        logger.error(f"Type mismatch in {func.__name__}: {e}")
+    except ValueError as e:
+        logger.error(f"Invalid input value in {func.__name__}: {e}")
+    except Exception as e:
+        logger.critical(f"Unexpected failure in {func.__name__}: {e}", exc_info=True)
+    return default
 
-    Returns:
-        A list of processed items.
-    """
-    return [func(item) for item in items]
+def validate_resource(data: Optional[dict], keys: list[str]) -> bool:
+    """Verifies dictionary presence and required key existence."""
+    if not isinstance(data, dict):
+        return False
+    return all(key in data for key in keys)
 
-def merge_configs(base: Dict[str, Any], override: Optional[Dict[str, Any]]) -> Dict[str, Any]:
-    """
-    Merges an override dictionary into a base configuration dictionary.
-
-    Args:
-        base: The default configuration dictionary.
-        override: An optional dictionary containing override values.
-
-    Returns:
-        A new dictionary with merged configuration values.
-    """
-    if not override:
-        return base.copy()
-    
-    result = base.copy()
-    result.update(override)
-    return result
-
-def get_safe(data: Dict[str, Any], key: str, default: Any = None) -> Any:
-    """
-    Retrieves a value from a dictionary safely.
-
-    Args:
-        data: The dictionary to search.
-        key: The key to retrieve.
-        default: The fallback value if key is missing.
-
-    Returns:
-        The value associated with the key or the default.
-    """
-    return data.get(key, default)
+def safe_coerce_int(value: Any, fallback: int = 0) -> int:
+    """Converts input to integer with robust error handling."""
+    try:
+        return int(value)
+    except (ValueError, TypeError):
+        return fallback
