@@ -1,36 +1,48 @@
-class CustomError(Exception):
-    """
-    Custom exception class for handling specific errors.
-    """
-    def __init__(self, message, errors=None):
-        super().__init__(message)
-        self.errors = errors
+"""Custom exception classes and error handling utilities for edge cases."""
 
-class ValidationError(CustomError):
-    """
-    Exception raised for validation errors.
-    """
-    def __init__(self, message, field):
-        super().__init__(message)
-        self.field = field
+from typing import Any, Optional
 
-class NotFoundError(CustomError):
-    """
-    Exception raised when an item is not found.
-    """
-    def __init__(self, message):
-        super().__init__(message)
 
-class AuthenticationError(CustomError):
-    """
-    Exception raised for authentication failures.
-    """
-    def __init__(self, message):
-        super().__init__(message)
+class BaseUtilsError(Exception):
+    """Base exception for all utility module errors."""
 
-class PermissionDeniedError(CustomError):
-    """
-    Exception raised for permission related errors.
-    """
-    def __init__(self, message):
+    def __init__(self, message: str, payload: Optional[Any] = None) -> None:
         super().__init__(message)
+        self.message = message
+        self.payload = payload
+
+    def to_dict(self) -> dict[str, Any]:
+        """Serialize exception details into a structured dictionary."""
+        return {
+            "error_type": self.__class__.__name__,
+            "message": self.message,
+            "payload": self.payload,
+        }
+
+
+class ValidationError(BaseUtilsError):
+    """Raised when input validation fails across utility functions."""
+
+    pass
+
+
+class ResourceNotFoundError(BaseUtilsError):
+    """Raised when a requested resource or file cannot be located."""
+
+    pass
+
+
+class ConfigurationError(BaseUtilsError):
+    """Raised when invalid or missing configuration values are encountered."""
+
+    pass
+
+
+def safe_execute(func, *args, default_return: Any = None, **kwargs) -> Any:
+    """Execute a callable safely, catching utility errors and returning a default value."""
+    try:
+        return func(*args, **kwargs)
+    except BaseUtilsError:
+        return default_return
+    except (ValueError, TypeError, KeyError) as err:
+        raise ValidationError(f"Invalid operation data: {err}") from err
