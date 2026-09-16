@@ -3,31 +3,43 @@ import sys
 from typing import Optional
 
 def get_logger(name: str, level: int = logging.INFO) -> logging.Logger:
-    """Configures and returns a standardized logger instance."""
+    """
+    Configures and returns a standard stream logger instance.
+
+    Args:
+        name: The name of the logger instance.
+        level: The logging severity level, defaults to INFO.
+
+    Returns:
+        A configured logging.Logger object.
+    """
     logger = logging.getLogger(name)
     logger.setLevel(level)
 
     if not logger.handlers:
         handler = logging.StreamHandler(sys.stdout)
         formatter = logging.Formatter(
-            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+            '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
         )
         handler.setFormatter(formatter)
         logger.addHandler(handler)
 
     return logger
 
-def log_execution_time(func):
-    """Decorator to log the execution time of functions."""
-    import time
-    import functools
+def log_message(logger: logging.Logger, message: str, level: str = 'info') -> None:
+    """
+    Logs a message to the provided logger instance.
 
-    @functools.wraps(func)
-    def wrapper(*args, **kwargs):
-        logger = get_logger(func.__module__)
-        start = time.perf_counter()
-        result = func(*args, **kwargs)
-        duration = time.perf_counter() - start
-        logger.debug(f"Function {func.__name__} took {duration:.4f}s")
-        return result
-    return wrapper
+    Args:
+        logger: The logger instance to use.
+        message: The message string to log.
+        level: The level name as a string (debug, info, warning, error).
+    """
+    levels = {
+        'debug': logger.debug,
+        'info': logger.info,
+        'warning': logger.warning,
+        'error': logger.error
+    }
+    log_func = levels.get(level.lower(), logger.info)
+    log_func(message)
