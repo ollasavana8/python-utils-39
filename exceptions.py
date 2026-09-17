@@ -1,48 +1,54 @@
-"""Custom exception classes and error handling utilities for edge cases."""
+"""Custom exception hierarchy for general utility operations."""
 
 from typing import Any, Optional
 
 
-class BaseUtilsError(Exception):
-    """Base exception for all utility module errors."""
+class BaseUtilError(Exception):
+    """Base exception class for python-utils-39 module errors."""
 
-    def __init__(self, message: str, payload: Optional[Any] = None) -> None:
+    def __init__(self, message: str, payload: Optional[dict[str, Any]] = None) -> None:
         super().__init__(message)
         self.message = message
-        self.payload = payload
+        self.payload = payload or {}
 
     def to_dict(self) -> dict[str, Any]:
-        """Serialize exception details into a structured dictionary."""
+        """Return error metadata and payload as a dictionary."""
         return {
             "error_type": self.__class__.__name__,
             "message": self.message,
-            "payload": self.payload,
+            "details": self.payload,
         }
 
 
-class ValidationError(BaseUtilsError):
-    """Raised when input validation fails across utility functions."""
+class ValidationError(BaseUtilError):
+    """Raised when input validation fails."""
 
     pass
 
 
-class ResourceNotFoundError(BaseUtilsError):
-    """Raised when a requested resource or file cannot be located."""
+class ConfigurationError(BaseUtilError):
+    """Raised when invalid or missing configuration parameters are detected."""
 
     pass
 
 
-class ConfigurationError(BaseUtilsError):
-    """Raised when invalid or missing configuration values are encountered."""
+class ProcessingError(BaseUtilError):
+    """Raised when a generic utility task fails during execution."""
 
     pass
 
 
-def safe_execute(func, *args, default_return: Any = None, **kwargs) -> Any:
-    """Execute a callable safely, catching utility errors and returning a default value."""
-    try:
-        return func(*args, **kwargs)
-    except BaseUtilsError:
-        return default_return
-    except (ValueError, TypeError, KeyError) as err:
-        raise ValidationError(f"Invalid operation data: {err}") from err
+class ResourceNotFoundError(BaseUtilError):
+    """Raised when a requested file or memory resource cannot be found."""
+
+    pass
+
+
+def format_exception_chain(error: Exception) -> list[str]:
+    """Extract and format messages from a chained exception sequence."""
+    chain = []
+    current: Optional[BaseException] = error
+    while current is not None:
+        chain.append(f"{current.__class__.__name__}: {str(current)}")
+        current = current.__cause__ or current.__context__
+    return chain
