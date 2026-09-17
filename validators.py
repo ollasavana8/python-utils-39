@@ -1,24 +1,36 @@
+import re
 from typing import Any, Optional
 
-def validate_email(email: Any) -> bool:
-    """Check if the provided input is a valid email string format."""
-    if not isinstance(email, str):
-        return False
-    return "@" in email and "." in email.split("@")[-1]
+def validate_input_schema(data: dict) -> bool:
+    """Validates that input dictionary contains required keys and valid types."""
+    required_fields = {"task_id": int, "payload": str}
+    
+    for field, expected_type in required_fields.items():
+        if field not in data:
+            return False
+        if not isinstance(data[field], expected_type):
+            return False
+    return True
 
-def validate_range(value: int, min_val: int, max_val: int) -> bool:
-    """Verify that an integer falls within a specified inclusive range."""
-    return min_val <= value <= max_val
+def sanitize_string(value: str) -> Optional[str]:
+    """Removes malicious characters from input strings."""
+    if not isinstance(value, str):
+        return None
+    # Allow only alphanumeric and underscores
+    sanitized = re.sub(r'[^a-zA-Z0-9_]', '', value)
+    return sanitized if sanitized else None
 
-def sanitize_input(value: Optional[str]) -> str:
-    """Remove whitespace and return empty string if input is None."""
-    if value is None:
-        return ""
-    return value.strip()
-
-def is_not_empty(data: Any) -> bool:
-    """Return true if the object has a length greater than zero."""
-    try:
-        return len(data) > 0
-    except TypeError:
-        return False
+def process_validated_payload(data: dict) -> dict:
+    """Main entry point for payload validation logic."""
+    if not validate_input_schema(data):
+        raise ValueError("Invalid schema format")
+        
+    clean_payload = sanitize_string(data['payload'])
+    if not clean_payload:
+        raise ValueError("Empty or invalid payload content")
+        
+    return {
+        "task_id": data['task_id'],
+        "payload": clean_payload,
+        "status": "validated"
+    }
