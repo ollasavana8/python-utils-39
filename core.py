@@ -1,29 +1,32 @@
-import logging
-from typing import Any, Optional, Callable
+import functools
+import time
+from typing import Any, Callable, Dict
 
-logger = logging.getLogger(__name__)
+# Cache for expensive function computations
+_CACHE: Dict[tuple, Any] = {}
 
-def safe_execute(func: Callable, *args: Any, default: Any = None, **kwargs: Any) -> Any:
-    """Executes a function safely with granular exception handling."""
-    try:
-        return func(*args, **kwargs)
-    except TypeError as e:
-        logger.error(f"Type mismatch in {func.__name__}: {e}")
-    except ValueError as e:
-        logger.error(f"Invalid input value in {func.__name__}: {e}")
-    except Exception as e:
-        logger.critical(f"Unexpected failure in {func.__name__}: {e}", exc_info=True)
-    return default
+def memoize(func: Callable) -> Callable:
+    """Performance decorator for expensive repeated calculations"""
+    @functools.wraps(func)
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
+        key = (func.__name__, args, frozenset(kwargs.items()))
+        if key not in _CACHE:
+            _CACHE[key] = func(*args, **kwargs)
+        return _CACHE[key]
+    return wrapper
 
-def validate_resource(data: Optional[dict], keys: list[str]) -> bool:
-    """Verifies dictionary presence and required key existence."""
-    if not isinstance(data, dict):
-        return False
-    return all(key in data for key in keys)
+def batch_process(data: list, chunk_size: int = 100) -> list:
+    """Generator for memory-efficient batch processing"""
+    for i in range(0, len(data), chunk_size):
+        yield data[i:i + chunk_size]
 
-def safe_coerce_int(value: Any, fallback: int = 0) -> int:
-    """Converts input to integer with robust error handling."""
-    try:
-        return int(value)
-    except (ValueError, TypeError):
-        return fallback
+class PerformanceTracker:
+    """Context manager for tracking execution time"""
+    def __enter__(self):
+        self.start = time.perf_counter()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.end = time.perf_counter()
+        self.duration = self.end - self.start
+        print(f"Execution took {self.duration:.4f} seconds")
