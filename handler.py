@@ -1,41 +1,38 @@
 import logging
-import os
-from typing import Any, Dict, Optional
+from typing import Any, Optional, Callable
 
 logger = logging.getLogger(__name__)
 
-class DataHandler:
-    """Manages data processing and cleanup tasks."""
-    
-    def __init__(self, temp_dir: str = '/tmp/processor'):
-        self.temp_dir = temp_dir
+class ExecutionHandler:
+    """Utility to safely execute callables with error boundaries."""
 
-    def cleanup(self) -> None:
-        """Removes all temporary files from the workspace."""
-        if not os.path.exists(self.temp_dir):
-            return
-        
-        for root, dirs, files in os.walk(self.temp_dir, topdown=False):
-            for name in files:
-                os.remove(os.path.join(root, name))
-            for name in dirs:
-                os.rmdir(os.path.join(root, name))
-        logger.info(f"Cleanup of {self.temp_dir} completed")
-
-    def process(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Validates and transforms input data dictionary."""
-        if not data:
-            logger.warning("Received empty data package")
-            return None
-            
+    @staticmethod
+    def execute(func: Callable, *args: Any, default: Any = None, **kwargs: Any) -> Any:
+        """
+        Executes a function safely, returning a default value on failure.
+        Handles common runtime exceptions to prevent application crashes.
+        """
         try:
-            processed = {k.lower(): v for k, v in data.items()}
-            processed['status'] = 'processed'
-            return processed
+            return func(*args, **kwargs)
+        except (ValueError, TypeError, AttributeError) as e:
+            logger.error(f"Execution error in {func.__name__}: {str(e)}")
+            return default
         except Exception as e:
-            logger.error(f"Processing error: {e}")
-            return None
+            logger.critical(f"Unexpected system error: {str(e)}", exc_info=True)
+            return default
 
-if __name__ == "__main__":
-    handler = DataHandler()
-    handler.cleanup()
+    @staticmethod
+    def validate_input(data: Optional[Any], expected_type: type) -> bool:
+        """
+        Strict validation for input types to handle edge cases.
+        Returns False if data is None or wrong type.
+        """
+        if data is None:
+            logger.warning("Input validation failed: data is None")
+            return False
+        
+        if not isinstance(data, expected_type):
+            logger.warning(f"Expected {expected_type}, got {type(data)}")
+            return False
+            
+        return True
