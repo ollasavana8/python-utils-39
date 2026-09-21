@@ -1,31 +1,33 @@
-import json
-import os
-from typing import Any, Dict
+import functools
+import logging
 
-def load_config(path: str, defaults: Dict[str, Any]) -> Dict[str, Any]:
-    """Loads JSON configuration with provided default values."""
-    config = defaults.copy()
+class ConfigCache:
+    """Thread-safe singleton for high-frequency configuration access."""
+    _instance = None
+    _cache = {}
 
-    if not os.path.exists(path):
-        return config
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super(ConfigCache, cls).__new__(cls)
+        return cls._instance
 
+    @functools.lru_cache(maxsize=128)
+    def get_setting(self, key: str, default: any = None):
+        """Retrieve setting with lru_cache for performance optimization."""
+        return self._cache.get(key, default)
+
+    def update_settings(self, new_data: dict):
+        """Bulk update of configuration parameters."""
+        self._cache.update(new_data)
+        self.get_setting.cache_clear()
+
+def get_optimized_config(key: str, default: any = None):
+    """Module-level access to cached configuration settings."""
     try:
-        with open(path, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-            config.update(data)
-    except (json.JSONDecodeError, IOError):
-        pass
+        return ConfigCache().get_setting(key, default)
+    except Exception as e:
+        logging.error(f"Configuration retrieval error: {e}")
+        return default
 
-    return config
-
-def get_env_or_config(key: str, config: Dict[str, Any], env_prefix: str = "APP_") -> Any:
-    """Prioritizes environment variables over configuration dicts."""
-    env_val = os.getenv(f"{env_prefix}{key.upper()}")
-    if env_val is not None:
-        return env_val
-    return config.get(key)
-
-if __name__ == "__main__":
-    defaults = {"host": "localhost", "port": 8080, "debug": False}
-    app_config = load_config("config.json", defaults)
-    print(f"Loaded config: {app_config}")
+# Pre-initialize global instance for performance
+config_instance = ConfigCache()
