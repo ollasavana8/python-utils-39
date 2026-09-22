@@ -1,32 +1,29 @@
-from typing import Any, Dict, List, Optional, Union
+import time
+import functools
+import logging
 
-def deep_get(dictionary: Dict[str, Any], keys: str, default: Any = None) -> Any:
-    """Retrieve nested values from dictionary using dot notation."""
-    parts = keys.split('.')
-    current = dictionary
-    try:
-        for part in parts:
-            current = current[part]
-        return current
-    except (KeyError, TypeError):
-        return default
+logger = logging.getLogger(__name__)
 
-def flatten_list(nested_list: List[Any]) -> List[Any]:
-    """Convert list of lists into a single flat list."""
-    flat = []
-    for item in nested_list:
-        if isinstance(item, list):
-            flat.extend(flatten_list(item))
-        else:
-            flat.append(item)
-    return flat
+def retry(exceptions, tries=3, delay=1, backoff=2):
+    """Decorator for retrying network operations with exponential backoff."""
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            mtries, mdelay = tries, delay
+            while mtries > 1:
+                try:
+                    return func(*args, **kwargs)
+                except exceptions as e:
+                    msg = f"{str(e)}, Retrying in {mdelay} seconds..."
+                    logger.warning(msg)
+                    time.sleep(mdelay)
+                    mtries -= 1
+                    mdelay *= backoff
+            return func(*args, **kwargs)
+        return wrapper
+    return decorator
 
-def sanitize_dict(data: Dict[str, Any], keys_to_remove: List[str]) -> Dict[str, Any]:
-    """Remove sensitive or unwanted keys from dictionary."""
-    return {k: v for k, v in data.items() if k not in keys_to_remove}
-
-def chunk_data(data: List[Any], size: int) -> List[List[Any]]:
-    """Split large list into smaller equal chunks."""
-    if size <= 0:
-        raise ValueError("Chunk size must be positive integer")
-    return [data[i:i + size] for i in range(0, len(data), size)]
+# Example usage:
+# @retry((ConnectionError, TimeoutError), tries=3, delay=2)
+# def fetch_data(url):
+#     pass
