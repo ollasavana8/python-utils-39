@@ -2,36 +2,37 @@ import logging
 import sys
 from typing import Optional
 
-def setup_logger(name: str, log_file: Optional[str] = None, level: str = 'INFO') -> logging.Logger:
-    '''Configures and returns a standardized logger with console and optional file output.'''
+def setup_logger(name: str, level: int = logging.INFO) -> logging.Logger:
+    """
+    Configures and returns a standardized logger instance.
+    """
     logger = logging.getLogger(name)
+    logger.setLevel(level)
 
-    # Prevent adding handlers multiple times
-    if logger.hasHandlers():
-        return logger
-
-    numeric_level = getattr(logging, level.upper(), logging.INFO)
-    logger.setLevel(numeric_level)
-
-    # Standard stream handler for console output
-    console_handler = logging.StreamHandler(sys.stdout)
-    console_formatter = logging.Formatter(
-        '[%(asctime)s] [%(levelname)s] [%(name)s]: %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S'
-    )
-    console_handler.setFormatter(console_formatter)
-    logger.addHandler(console_handler)
-
-    # Optional file logger configuration
-    if log_file:
-        try:
-            file_handler = logging.FileHandler(log_file, encoding='utf-8')
-            file_formatter = logging.Formatter(
-                '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-            )
-            file_handler.setFormatter(file_formatter)
-            logger.addHandler(file_handler)
-        except OSError as e:
-            logger.error(f'Failed to initialize file log handler: {e}')
+    if not logger.handlers:
+        formatter = logging.Formatter(
+            '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        )
+        
+        # Standard output handler for logs
+        console_handler = logging.StreamHandler(sys.stdout)
+        console_handler.setFormatter(formatter)
+        logger.addHandler(console_handler)
 
     return logger
+
+def log_data_summary(logger: logging.Logger, data: dict) -> None:
+    """
+    Logs a summary of dictionary data for debugging.
+    """
+    keys_count = len(data.keys())
+    logger.info(f"Data processing initiated with {keys_count} keys")
+    
+    for key, value in data.items():
+        logger.debug(f"Key: {key}, Type: {type(value).__name__}")
+
+if __name__ == '__main__':
+    # Example usage for verification
+    test_logger = setup_logger('app_logger')
+    test_logger.info("Logger initialization complete")
+    log_data_summary(test_logger, {'id': 1, 'status': 'active'})
