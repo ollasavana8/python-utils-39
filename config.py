@@ -1,33 +1,30 @@
-import functools
-import logging
+import json
+import os
+from typing import Any, Dict
 
-class ConfigCache:
-    """Thread-safe singleton for high-frequency configuration access."""
-    _instance = None
-    _cache = {}
-
-    def __new__(cls):
-        if cls._instance is None:
-            cls._instance = super(ConfigCache, cls).__new__(cls)
-        return cls._instance
-
-    @functools.lru_cache(maxsize=128)
-    def get_setting(self, key: str, default: any = None):
-        """Retrieve setting with lru_cache for performance optimization."""
-        return self._cache.get(key, default)
-
-    def update_settings(self, new_data: dict):
-        """Bulk update of configuration parameters."""
-        self._cache.update(new_data)
-        self.get_setting.cache_clear()
-
-def get_optimized_config(key: str, default: any = None):
-    """Module-level access to cached configuration settings."""
+def load_config(filepath: str, defaults: Dict[str, Any]) -> Dict[str, Any]:
+    """Load configuration from JSON file with fallback defaults."""
+    config = defaults.copy()
+    
+    if not os.path.exists(filepath):
+        return config
+        
     try:
-        return ConfigCache().get_setting(key, default)
-    except Exception as e:
-        logging.error(f"Configuration retrieval error: {e}")
-        return default
+        with open(filepath, 'r') as f:
+            user_config = json.load(f)
+            if isinstance(user_config, dict):
+                config.update(user_config)
+    except (json.JSONDecodeError, IOError):
+        pass
+        
+    return config
 
-# Pre-initialize global instance for performance
-config_instance = ConfigCache()
+def get_env_config(prefix: str, defaults: Dict[str, Any]) -> Dict[str, Any]:
+    """Override configuration values using environment variables."""
+    config = defaults.copy()
+    for key in config.keys():
+        env_key = f"{prefix}_{key.upper()}"
+        value = os.environ.get(env_key)
+        if value is not None:
+            config[key] = type(config[key])(value)
+    return config
