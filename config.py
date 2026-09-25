@@ -2,29 +2,29 @@ import json
 import os
 from typing import Any, Dict
 
-def load_config(filepath: str, defaults: Dict[str, Any]) -> Dict[str, Any]:
-    """Load configuration from JSON file with fallback defaults."""
-    config = defaults.copy()
-    
-    if not os.path.exists(filepath):
-        return config
-        
-    try:
-        with open(filepath, 'r') as f:
-            user_config = json.load(f)
-            if isinstance(user_config, dict):
-                config.update(user_config)
-    except (json.JSONDecodeError, IOError):
-        pass
-        
-    return config
+class ConfigLoader:
+    """Utility to load JSON configurations with default values."""
 
-def get_env_config(prefix: str, defaults: Dict[str, Any]) -> Dict[str, Any]:
-    """Override configuration values using environment variables."""
-    config = defaults.copy()
-    for key in config.keys():
-        env_key = f"{prefix}_{key.upper()}"
-        value = os.environ.get(env_key)
-        if value is not None:
-            config[key] = type(config[key])(value)
-    return config
+    def __init__(self, defaults: Dict[str, Any] = None):
+        self.defaults = defaults or {}
+
+    def load(self, file_path: str) -> Dict[str, Any]:
+        """Reads JSON file and merges with existing defaults."""
+        config = self.defaults.copy()
+        
+        if os.path.exists(file_path):
+            try:
+                with open(file_path, 'r') as f:
+                    user_config = json.load(f)
+                    if isinstance(user_config, dict):
+                        config.update(user_config)
+            except (json.JSONDecodeError, IOError):
+                pass
+        
+        return config
+
+    @staticmethod
+    def save(file_path: str, data: Dict[str, Any]) -> None:
+        """Persists dictionary to a JSON file."""
+        with open(file_path, 'w') as f:
+            json.dump(data, f, indent=4)
