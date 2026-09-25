@@ -1,38 +1,35 @@
 import logging
-import sys
-from typing import Optional
+from logging.handlers import RotatingFileHandler
+import os
 
-def setup_logger(name: str, level: int = logging.INFO) -> logging.Logger:
-    """
-    Configures and returns a standardized logger instance.
-    """
+def setup_logger(name: str, log_file: str, level: int = logging.INFO) -> logging.Logger:
+    """Configures a rotating file logger."""
     logger = logging.getLogger(name)
     logger.setLevel(level)
 
+    # Ensure directory exists
+    log_dir = os.path.dirname(log_file)
+    if log_dir and not os.path.exists(log_dir):
+        os.makedirs(log_dir)
+
+    # Setup rotation: 5MB per file, keep 3 backups
+    handler = RotatingFileHandler(
+        log_file, 
+        maxBytes=5 * 1024 * 1024, 
+        backupCount=3
+    )
+
+    formatter = logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
+    handler.setFormatter(formatter)
+
     if not logger.handlers:
-        formatter = logging.Formatter(
-            '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-        )
-        
-        # Standard output handler for logs
-        console_handler = logging.StreamHandler(sys.stdout)
-        console_handler.setFormatter(formatter)
-        logger.addHandler(console_handler)
+        logger.addHandler(handler)
 
     return logger
 
-def log_data_summary(logger: logging.Logger, data: dict) -> None:
-    """
-    Logs a summary of dictionary data for debugging.
-    """
-    keys_count = len(data.keys())
-    logger.info(f"Data processing initiated with {keys_count} keys")
-    
-    for key, value in data.items():
-        logger.debug(f"Key: {key}, Type: {type(value).__name__}")
-
+# Example usage:
 if __name__ == '__main__':
-    # Example usage for verification
-    test_logger = setup_logger('app_logger')
-    test_logger.info("Logger initialization complete")
-    log_data_summary(test_logger, {'id': 1, 'status': 'active'})
+    app_logger = setup_logger('app', 'logs/app.log')
+    app_logger.info('Logger initialized successfully')
