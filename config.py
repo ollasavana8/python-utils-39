@@ -2,36 +2,30 @@ import json
 import os
 from typing import Any, Dict
 
-def load_config(filepath: str, defaults: Dict[str, Any]) -> Dict[str, Any]:
-    """Loads JSON configuration with fallback to default values."""
-    config = defaults.copy()
-    
-    if not os.path.exists(filepath):
+class ConfigLoader:
+    """Utility for loading JSON configurations with default values."""
+
+    def __init__(self, defaults: Dict[str, Any]):
+        self.defaults = defaults
+
+    def load(self, filepath: str) -> Dict[str, Any]:
+        """Reads JSON file and merges it with provided defaults."""
+        config = self.defaults.copy()
+
+        if not os.path.exists(filepath):
+            return config
+
+        try:
+            with open(filepath, 'r', encoding='utf-8') as f:
+                user_config = json.load(f)
+                if isinstance(user_config, dict):
+                    config.update(user_config)
+        except (json.JSONDecodeError, IOError):
+            pass
+
         return config
 
-    try:
-        with open(filepath, 'r') as f:
-            user_config = json.load(f)
-            if isinstance(user_config, dict):
-                config.update(user_config)
-    except (json.JSONDecodeError, IOError):
-        pass
-
-    return config
-
-def get_env_var(key: str, default: Any) -> Any:
-    """Retrieves environment variable with type-safe default fallback."""
-    val = os.getenv(key)
-    if val is None:
-        return default
-    
-    # Cast to type of default if possible
-    try:
-        return type(default)(val)
-    except (ValueError, TypeError):
-        return val
-
-if __name__ == '__main__':
-    defaults = {'host': 'localhost', 'port': 8080, 'debug': False}
-    current_config = load_config('settings.json', defaults)
-    print(f'Loaded config: {current_config}')
+def get_config(filepath: str, defaults: Dict[str, Any]) -> Dict[str, Any]:
+    """Helper function to instantiate and load config."""
+    loader = ConfigLoader(defaults)
+    return loader.load(filepath)
