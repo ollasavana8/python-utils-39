@@ -1,39 +1,31 @@
-import time
-import functools
 import logging
-from typing import Callable, Any, Type, Tuple
 
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def retry_network_operation(
-    max_retries: int = 3,
-    delay: float = 1.0,
-    exceptions: Tuple[Type[Exception], ...] = (ConnectionError, TimeoutError)
-):
-    """Decorator for retrying network operations with exponential backoff."""
-    def decorator(func: Callable):
-        @functools.wraps(func)
-        def wrapper(*args, **kwargs) -> Any:
-            last_exception = None
-            current_delay = delay
-            
-            for attempt in range(1, max_retries + 1):
-                try:
-                    return func(*args, **kwargs)
-                except exceptions as e:
-                    last_exception = e
-                    logger.warning(f"Attempt {attempt} failed: {e}. Retrying in {current_delay}s...")
-                    if attempt < max_retries:
-                        time.sleep(current_delay)
-                        current_delay *= 2
-            
-            logger.error(f"Operation failed after {max_retries} attempts.")
-            raise last_exception
-        return wrapper
-    return decorator
+def validate_input(data):
+    """Ensures data is a non-empty dictionary."""
+    if not isinstance(data, dict) or not data:
+        raise ValueError("Invalid input: payload must be a non-empty dictionary.")
+    if 'id' not in data:
+        raise KeyError("Invalid input: missing required key 'id'.")
+    return True
 
-@retry_network_operation(max_retries=3, delay=2.0)
-def fetch_data_securely(url: str):
-    """Example usage of retry decorator for network calls."""
-    # Placeholder for actual network logic
-    pass
+def run_processing_loop(items):
+    """Processes items with mandatory input validation."""
+    for item in items:
+        try:
+            validate_input(item)
+            process_item(item)
+        except (ValueError, KeyError) as e:
+            logger.error(f"Skipping item due to error: {e}")
+        except Exception as e:
+            logger.critical(f"Unexpected failure during processing: {e}")
+
+def process_item(data):
+    """Business logic for item processing."""
+    logger.info(f"Successfully processed item: {data['id']}")
+
+if __name__ == '__main__':
+    data_stream = [{'id': 1}, 'bad_data', {'id': 2}, {}]
+    run_processing_loop(data_stream)
