@@ -1,26 +1,36 @@
-import re
+import logging
+from typing import Any, Optional
 
-# regex patterns for general utility validation
-EMAIL_REGEX = re.compile(r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$')
+logger = logging.getLogger(__name__)
 
-def validate_input(data, schema):
-    """Validates dictionary data against a schema dict of types."""
-    for key, expected_type in schema.items():
-        if key not in data:
-            raise ValueError(f"Missing required field: {key}")
+class ValidationError(Exception):
+    """Custom exception for validation edge cases."""
+    pass
+
+def validate_input(value: Any, expected_type: type) -> bool:
+    """Validates input type and handles null or edge cases."""
+    try:
+        if value is None:
+            raise ValidationError("input value cannot be None")
         
-        value = data[key]
         if not isinstance(value, expected_type):
-            raise TypeError(f"Field '{key}' expects {expected_type}, got {type(value)}")
-
-def validate_email(email):
-    """Checks if string matches standard email format."""
-    if not isinstance(email, str) or not EMAIL_REGEX.match(email):
+            raise TypeError(f"expected {expected_type.__name__}, got {type(value).__name__}")
+            
+        return True
+    except (ValidationError, TypeError) as e:
+        logger.error("validation failure: %s", e)
         return False
-    return True
 
-def sanitize_input(value):
-    """Removes potential injection characters from input."""
-    if not isinstance(value, str):
-        return value
-    return re.sub(r'[;<>"\']', '', value)
+def safe_get_index(data: list, index: int, default: Any = None) -> Any:
+    """Retrieves list index with safe bounds handling."""
+    if not isinstance(data, list):
+        return default
+        
+    try:
+        return data[index]
+    except IndexError:
+        logger.warning("index %d out of bounds for list length %d", index, len(data))
+        return default
+    except Exception as e:
+        logger.error("unexpected error during index access: %s", e)
+        return default
