@@ -1,34 +1,36 @@
 import logging
-from logging.handlers import RotatingFileHandler
-from pathlib import Path
+import functools
+import time
+from typing import Callable, Any
 
-def setup_logger(name: str, log_file: str, level: int = logging.INFO) -> logging.Logger:
-    """Configures a rotating file logger."""
-    logger = logging.getLogger(name)
-    logger.setLevel(level)
+# Cache for logger instances to reduce object instantiation overhead
+_LOGGERS = {}
 
-    # Ensure directory exists
-    log_path = Path(log_file)
-    log_path.parent.mkdir(parents=True, exist_ok=True)
+def get_logger(name: str) -> logging.Logger:
+    """Provides a cached logger instance for performance."""
+    if name not in _LOGGERS:
+        _LOGGERS[name] = logging.getLogger(name)
+    return _LOGGERS[name]
 
-    # Setup rotating file handler: 5MB max per file, keep 3 backups
-    handler = RotatingFileHandler(
-        log_file, 
-        maxBytes=5 * 1024 * 1024, 
-        backupCount=3
-    )
+def timed_execution(func: Callable) -> Callable:
+    """Decorator to log execution time of core methods."""
+    @functools.wraps(func)
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
+        start = time.perf_counter()
+        try:
+            return func(*args, **kwargs)
+        finally:
+            elapsed = time.perf_counter() - start
+            logger = get_logger(func.__module__)
+            logger.debug(f"function {func.__name__} took {elapsed:.4f}s")
+    return wrapper
 
-    formatter = logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    )
-    handler.setFormatter(formatter)
+class PerformanceLogger:
+    """Lightweight logger wrapper for high-frequency operations."""
+    def __init__(self, name: str):
+        self._logger = get_logger(name)
+        self._enabled = self._logger.isEnabledFor(logging.DEBUG)
 
-    if not logger.handlers:
-        logger.addHandler(handler)
-
-    # Stream output to console
-    console = logging.StreamHandler()
-    console.setFormatter(formatter)
-    logger.addHandler(console)
-
-    return logger
+    def log_if_slow(self, threshold: float, func_name: str, duration: float) -> None:
+        if self._enabled and duration > threshold:
+            self._logger.warning(f"Slow operation in {func_name}: {duration:.4f}s")
