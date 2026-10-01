@@ -1,31 +1,38 @@
+import time
+import functools
 import logging
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def validate_input(data):
-    """Ensures data is a non-empty dictionary."""
-    if not isinstance(data, dict) or not data:
-        raise ValueError("Invalid input: payload must be a non-empty dictionary.")
-    if 'id' not in data:
-        raise KeyError("Invalid input: missing required key 'id'.")
-    return True
+def with_retry(retries=3, delay=1.0, backoff=2.0):
+    """Decorator for retrying operations with exponential backoff."""
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            current_delay = delay
+            for attempt in range(retries):
+                try:
+                    return func(*args, **kwargs)
+                except (ConnectionError, TimeoutError) as e:
+                    if attempt == retries - 1:
+                        logger.error(f"Final attempt failed for {func.__name__}")
+                        raise
+                    
+                    logger.warning(f"Attempt {attempt + 1} failed: {e}. Retrying...")
+                    time.sleep(current_delay)
+                    current_delay *= backoff
+            return None
+        return wrapper
+    return decorator
 
-def run_processing_loop(items):
-    """Processes items with mandatory input validation."""
-    for item in items:
-        try:
-            validate_input(item)
-            process_item(item)
-        except (ValueError, KeyError) as e:
-            logger.error(f"Skipping item due to error: {e}")
-        except Exception as e:
-            logger.critical(f"Unexpected failure during processing: {e}")
-
-def process_item(data):
-    """Business logic for item processing."""
-    logger.info(f"Successfully processed item: {data['id']}")
-
-if __name__ == '__main__':
-    data_stream = [{'id': 1}, 'bad_data', {'id': 2}, {}]
-    run_processing_loop(data_stream)
+class NetworkProcessor:
+    """Service class for executing network-bound tasks."""
+    
+    @with_retry(retries=3, delay=2.0)
+    def fetch_data(self, url: str):
+        """Mock function representing a volatile network request."""
+        # Simulated transient error logic
+        import random
+        if random.random() < 0.7:
+            raise ConnectionError("Temporary server timeout")
+        return {"status": 200, "data": "success"}
