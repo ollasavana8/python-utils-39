@@ -1,43 +1,43 @@
-"""General helper utilities for data manipulation and string processing."""
+import time
+import random
+from functools import wraps
+import logging
 
-import re
-from typing import Any, Iterable, List, TypeVar
+logger = logging.getLogger(__name__)
 
-T = TypeVar("T")
+def retry(exceptions=(Exception,), tries=3, delay=1.0, backoff=2.0, jitter=0.1):
+    """
+    Decorator to retry a function call with exponential backoff and jitter.
 
-
-def chunk_list(items: List[T], chunk_size: int) -> List[List[T]]:
-    """Split a list into smaller chunks of a specified size."""
-    if chunk_size <= 0:
-        raise ValueError("chunk_size must be a positive integer")
-    return [items[i : i + chunk_size] for i in range(0, len(items), chunk_size)]
-
-
-def flatten(container: Iterable[Any]) -> List[Any]:
-    """Flatten nested lists or tuples into a single flat list."""
-    flat_list = []
-    for item in container:
-        if isinstance(item, (list, tuple)):
-            flat_list.extend(flatten(item))
-        else:
-            flat_list.append(item)
-    return flat_list
-
-
-def deep_get(data: dict, key_path: str, default: Any = None) -> Any:
-    """Retrieve nested dictionary values using dot-separated keys."""
-    keys = key_path.split(".")
-    current = data
-    for key in keys:
-        if isinstance(current, dict) and key in current:
-            current = current[key]
-        else:
-            return default
-    return current
-
-
-def slugify(text: str) -> str:
-    """Convert string into a URL-friendly slug."""
-    text = text.lower().strip()
-    text = re.sub(r"[^\w\s-]", "", text)
-    return re.sub(r"[-\s]+", "-", text)
+    :param exceptions: Exception or tuple of exceptions to catch and retry.
+    :param tries: Maximum number of times to try the operation.
+    :param delay: Initial delay between retries in seconds.
+    :param backoff: Multiplier applied to delay after each retry.
+    :param jitter: Maximum random jitter ratio added/subtracted to/from delay.
+    """
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            m_tries, m_delay = tries, delay
+            while m_tries > 1:
+                try:
+                    return func(*args, **kwargs)
+                except exceptions as e:
+                    # Calculate backoff with optional jitter
+                    rand_jitter = random.uniform(-jitter, jitter) * m_delay
+                    sleep_time = max(0.0, m_delay + rand_jitter)
+                    
+                    logger.warning(
+                        f"Retrying {func.__name__} in {sleep_time:.2f} seconds "
+                        f"due to {e.__class__.__name__}: {e}. "
+                        f"Attempts remaining: {m_tries - 1}."
+                    )
+                    
+                    time.sleep(sleep_time)
+                    m_tries -= 1
+                    m_delay *= backoff
+            
+            # Final attempt without catching exceptions
+            return func(*args, **kwargs)
+        return wrapper
+    return decorator
