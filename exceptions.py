@@ -1,54 +1,52 @@
-"""Custom exception hierarchy for general utility operations."""
+"""Custom exception classes for python-utils-39.
 
-from typing import Any, Optional
+This module defines the standard hierarchy of exceptions used across the
+utility library, allowing for precise error handling and rich error contexts.
+"""
+
+from typing import Any, Dict, Optional
 
 
 class BaseUtilError(Exception):
-    """Base exception class for python-utils-39 module errors."""
+    """Base exception for all errors raised by this utility library."""
 
-    def __init__(self, message: str, payload: Optional[dict[str, Any]] = None) -> None:
+    def __init__(self, message: str, details: Optional[Dict[str, Any]] = None) -> None:
+        """Initialize the base exception with a message and optional metadata.
+
+        Args:
+            message: A human-readable error description.
+            details: Optional dictionary containing additional error context.
+        """
         super().__init__(message)
-        self.message = message
-        self.payload = payload or {}
+        self.message: str = message
+        self.details: Dict[str, Any] = details or {}
 
-    def to_dict(self) -> dict[str, Any]:
-        """Return error metadata and payload as a dictionary."""
-        return {
-            "error_type": self.__class__.__name__,
-            "message": self.message,
-            "details": self.payload,
-        }
+    def __str__(self) -> str:
+        if self.details:
+            return f"{self.message} (Context: {self.details})"
+        return self.message
 
 
 class ValidationError(BaseUtilError):
-    """Raised when input validation fails."""
-
-    pass
+    """Exception raised when utility arguments or configuration fail validation."""
 
 
 class ConfigurationError(BaseUtilError):
-    """Raised when invalid or missing configuration parameters are detected."""
-
-    pass
-
-
-class ProcessingError(BaseUtilError):
-    """Raised when a generic utility task fails during execution."""
-
-    pass
+    """Exception raised when configuration parameters are missing or invalid."""
 
 
 class ResourceNotFoundError(BaseUtilError):
-    """Raised when a requested file or memory resource cannot be found."""
+    """Exception raised when a requested resource, file, or key is not found."""
 
-    pass
+    def __init__(
+        self, message: str, resource_identifier: Optional[str] = None
+    ) -> None:
+        """Initialize with resource-specific identifier.
 
-
-def format_exception_chain(error: Exception) -> list[str]:
-    """Extract and format messages from a chained exception sequence."""
-    chain = []
-    current: Optional[BaseException] = error
-    while current is not None:
-        chain.append(f"{current.__class__.__name__}: {str(current)}")
-        current = current.__cause__ or current.__context__
-    return chain
+        Args:
+            message: Description of the missing resource.
+            resource_identifier: The name or path of the missing resource.
+        """
+        details = {"resource": resource_identifier} if resource_identifier else None
+        super().__init__(message, details=details)
+        self.resource_identifier: Optional[str] = resource_identifier
