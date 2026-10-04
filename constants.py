@@ -1,34 +1,26 @@
-import os
-from pathlib import Path
-from typing import Final
+from typing import Final, Dict, List
 
-# Application-wide configuration and environment constants
+# Network timeout settings in seconds
+DEFAULT_TIMEOUT: Final[int] = 30
+MAX_RETRIES: Final[int] = 3
 
-APP_NAME: Final[str] = 'python-utils-39'
+# Supported configuration environments
+ENVIRONMENTS: Final[List[str]] = ['development', 'staging', 'production']
 
-# Paths based on project root
-BASE_DIR: Final[Path] = Path(__file__).resolve().parent.parent
-LOG_DIR: Final[Path] = BASE_DIR / 'logs'
-DATA_DIR: Final[Path] = BASE_DIR / 'data'
+# Mapping for status code definitions
+STATUS_CODES: Final[Dict[int, str]] = {
+    200: 'OK',
+    400: 'BAD_REQUEST',
+    401: 'UNAUTHORIZED',
+    404: 'NOT_FOUND',
+    500: 'INTERNAL_SERVER_ERROR'
+}
 
-# Environment settings with fallback defaults
-DEBUG_MODE: Final[bool] = os.getenv('DEBUG', 'False').lower() == 'true'
-MAX_RETRIES: Final[int] = int(os.getenv('MAX_RETRIES', '3'))
-TIMEOUT_SECONDS: Final[int] = int(os.getenv('TIMEOUT', '30'))
+def get_status_description(code: int) -> str:
+    """Return the descriptive string for a given status code."""
+    return STATUS_CODES.get(code, 'UNKNOWN')
 
-# Standard naming conventions
-DEFAULT_ENCODING: Final[str] = 'utf-8'
-SUPPORTED_EXTENSIONS: Final[list[str]] = ['.json', '.csv', '.yaml']
-
-# Ensure directories exist upon import
-for directory in [LOG_DIR, DATA_DIR]:
-    directory.mkdir(parents=True, exist_ok=True)
-
-def get_app_info() -> dict[str, str | bool]:
-    """Return a summary of current constants for diagnostics."""
-    return {
-        'app': APP_NAME,
-        'debug': DEBUG_MODE,
-        'max_retries': MAX_RETRIES,
-        'base_path': str(BASE_DIR)
-    }
+class AppConfig:
+    """Global application configuration constants."""
+    VERSION: Final[str] = "1.0.0"
+    BASE_DIR: Final[str] = "/opt/python-utils-39"
