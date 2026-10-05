@@ -1,38 +1,35 @@
-import collections
-from itertools import islice
-from typing import Generator, Iterable, Any, Dict, List
+import os
+import logging
+from typing import Any, Dict, Optional
 
-def chunk_iterable(iterable: Iterable[Any], chunk_size: int) -> Generator[List[Any], None, None]:
-    """
-    Yield successive chunks from an iterable.
-    
-    Optimized with itertools.islice to avoid loading the full iterable into memory.
-    """
-    if chunk_size < 1:
-        raise ValueError("Chunk size must be at least 1")
-    iterator = iter(iterable)
-    while True:
-        chunk = list(islice(iterator, chunk_size))
-        if not chunk:
-            break
-        yield chunk
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger('python-utils-39')
 
-def flatten_dict(d: Dict[str, Any], parent_key: str = '', sep: str = '_') -> Dict[str, Any]:
-    """
-    Flatten a nested dictionary iteratively.
-    
-    Optimized using a queue to prevent recursion overhead and stack limit errors.
-    """
-    items: List[tuple] = []
-    queue = collections.deque([(d, parent_key)])
+class DataProcessor:
+    """Handles core data transformation and cleanup tasks."""
 
-    while queue:
-        current_dict, prefix = queue.popleft()
-        for k, v in current_dict.items():
-            new_key = f"{prefix}{sep}{k}" if prefix else k
-            if isinstance(v, dict):
-                queue.append((v, new_key))
+    def __init__(self, settings: Optional[Dict[str, Any]] = None):
+        self.settings = settings or {}
+
+    def clean_env(self, prefix: str = "TMP_") -> None:
+        """Removes environment variables matching prefix."""
+        keys_to_remove = [k for k in os.environ if k.startswith(prefix)]
+        for key in keys_to_remove:
+            del os.environ[key]
+            logger.debug(f"Removed env var: {key}")
+
+    def reorganize_payload(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Flattens dictionary structure for easier parsing."""
+        output = {}
+        for key, value in data.items():
+            if isinstance(value, dict):
+                for sub_key, sub_val in value.items():
+                    output[f"{key}_{sub_key}"] = sub_val
             else:
-                items.append((new_key, v))
-                
-    return dict(items)
+                output[key] = value
+        return output
+
+    @staticmethod
+    def validate_path(path: str) -> bool:
+        """Ensures path exists and is accessible."""
+        return os.path.exists(path) and os.access(path, os.R_OK)
