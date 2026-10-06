@@ -1,35 +1,35 @@
-import os
-import logging
-from typing import Any, Dict, Optional
+import functools
+import time
+from typing import Callable, Any, Dict
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger('python-utils-39')
+# Cache dictionary for memoization of expensive function calls
+_FUNCTION_CACHE: Dict[tuple, Any] = {}
 
-class DataProcessor:
-    """Handles core data transformation and cleanup tasks."""
+def memoize(func: Callable) -> Callable:
+    """Decorator to cache function results based on arguments."""
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs) -> Any:
+        key = (func.__name__, args, frozenset(kwargs.items()))
+        if key not in _FUNCTION_CACHE:
+            _FUNCTION_CACHE[key] = func(*args, **kwargs)
+        return _FUNCTION_CACHE[key]
+    return wrapper
 
-    def __init__(self, settings: Optional[Dict[str, Any]] = None):
-        self.settings = settings or {}
+def batch_process(data: list, chunk_size: int = 1000):
+    """Generator to process large datasets in memory-efficient chunks."""
+    for i in range(0, len(data), chunk_size):
+        yield data[i:i + chunk_size]
 
-    def clean_env(self, prefix: str = "TMP_") -> None:
-        """Removes environment variables matching prefix."""
-        keys_to_remove = [k for k in os.environ if k.startswith(prefix)]
-        for key in keys_to_remove:
-            del os.environ[key]
-            logger.debug(f"Removed env var: {key}")
+class PerformanceTracker:
+    """Context manager for tracking block execution time."""
+    def __init__(self, label: str):
+        self.label = label
+        self.start_time = 0.0
 
-    def reorganize_payload(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        """Flattens dictionary structure for easier parsing."""
-        output = {}
-        for key, value in data.items():
-            if isinstance(value, dict):
-                for sub_key, sub_val in value.items():
-                    output[f"{key}_{sub_key}"] = sub_val
-            else:
-                output[key] = value
-        return output
+    def __enter__(self):
+        self.start_time = time.perf_counter()
+        return self
 
-    @staticmethod
-    def validate_path(path: str) -> bool:
-        """Ensures path exists and is accessible."""
-        return os.path.exists(path) and os.access(path, os.R_OK)
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        elapsed = time.perf_counter() - self.start_time
+        print(f"[PERF] {self.label} finished in {elapsed:.4f}s")
