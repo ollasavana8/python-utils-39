@@ -1,43 +1,32 @@
-import time
-import random
-from functools import wraps
-import logging
+from typing import Any, Dict, List
 
-logger = logging.getLogger(__name__)
 
-def retry(exceptions=(Exception,), tries=3, delay=1.0, backoff=2.0, jitter=0.1):
+def flatten_dict(d: Dict[str, Any], parent_key: str = '', sep: str = '_') -> Dict[str, Any]:
     """
-    Decorator to retry a function call with exponential backoff and jitter.
-
-    :param exceptions: Exception or tuple of exceptions to catch and retry.
-    :param tries: Maximum number of times to try the operation.
-    :param delay: Initial delay between retries in seconds.
-    :param backoff: Multiplier applied to delay after each retry.
-    :param jitter: Maximum random jitter ratio added/subtracted to/from delay.
+    Flatten a nested dictionary recursively by joining keys with a separator.
     """
-    def decorator(func):
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            m_tries, m_delay = tries, delay
-            while m_tries > 1:
-                try:
-                    return func(*args, **kwargs)
-                except exceptions as e:
-                    # Calculate backoff with optional jitter
-                    rand_jitter = random.uniform(-jitter, jitter) * m_delay
-                    sleep_time = max(0.0, m_delay + rand_jitter)
-                    
-                    logger.warning(
-                        f"Retrying {func.__name__} in {sleep_time:.2f} seconds "
-                        f"due to {e.__class__.__name__}: {e}. "
-                        f"Attempts remaining: {m_tries - 1}."
-                    )
-                    
-                    time.sleep(sleep_time)
-                    m_tries -= 1
-                    m_delay *= backoff
-            
-            # Final attempt without catching exceptions
-            return func(*args, **kwargs)
-        return wrapper
-    return decorator
+    items: List[tuple] = []
+    for k, v in d.items():
+        new_key = f"{parent_key}{sep}{k}" if parent_key else k
+        if isinstance(v, dict):
+            items.extend(flatten_dict(v, new_key, sep=sep).items())
+        else:
+            items.append((new_key, v))
+    return dict(items)
+
+
+def safe_get(d: Dict[str, Any], path: str, default: Any = None, sep: str = '.') -> Any:
+    """
+    Safely retrieve nested values from a dictionary using a delimited path string.
+    """
+    if not isinstance(d, dict):
+        return default
+
+    keys = path.split(sep)
+    current: Any = d
+    for key in keys:
+        if isinstance(current, dict) and key in current:
+            current = current[key]
+        else:
+            return default
+    return current
