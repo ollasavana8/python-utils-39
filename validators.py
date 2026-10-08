@@ -1,36 +1,25 @@
-import logging
-from typing import Any, Optional
+from typing import Any, Optional, Union
 
-logger = logging.getLogger(__name__)
-
-class ValidationError(Exception):
-    """Custom exception for validation edge cases."""
-    pass
-
-def validate_input(value: Any, expected_type: type) -> bool:
-    """Validates input type and handles null or edge cases."""
-    try:
-        if value is None:
-            raise ValidationError("input value cannot be None")
-        
-        if not isinstance(value, expected_type):
-            raise TypeError(f"expected {expected_type.__name__}, got {type(value).__name__}")
-            
-        return True
-    except (ValidationError, TypeError) as e:
-        logger.error("validation failure: %s", e)
+def validate_email(email: str) -> bool:
+    """Verify if a string follows basic email format."""
+    if not isinstance(email, str) or "@" not in email:
         return False
+    return email.count("@") == 1 and "." in email.split("@")[-1]
 
-def safe_get_index(data: list, index: int, default: Any = None) -> Any:
-    """Retrieves list index with safe bounds handling."""
-    if not isinstance(data, list):
-        return default
-        
-    try:
-        return data[index]
-    except IndexError:
-        logger.warning("index %d out of bounds for list length %d", index, len(data))
-        return default
-    except Exception as e:
-        logger.error("unexpected error during index access: %s", e)
-        return default
+def validate_range(value: Union[int, float], min_val: float, max_val: float) -> bool:
+    """Check if number falls within inclusive boundary."""
+    return min_val <= value <= max_val
+
+def sanitize_input(data: Any, default: Any = None) -> Any:
+    """Ensure data is not None, return default if empty."""
+    return data if data is not None else default
+
+def validate_required_keys(data: dict, keys: list[str]) -> bool:
+    """Confirm all mandatory keys exist in dictionary."""
+    return all(key in data for key in keys)
+
+def is_truthy(value: Any) -> bool:
+    """Check if value evaluates to True including string checks."""
+    if isinstance(value, str):
+        return value.lower() in ("true", "1", "yes", "on")
+    return bool(value)
