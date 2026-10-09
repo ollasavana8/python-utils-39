@@ -1,26 +1,26 @@
-from typing import Final, Dict, List
+import os
 
-# Network timeout settings in seconds
-DEFAULT_TIMEOUT: Final[int] = 30
-MAX_RETRIES: Final[int] = 3
+# Application path configurations
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+LOG_DIR = os.path.join(BASE_DIR, 'logs')
 
-# Supported configuration environments
-ENVIRONMENTS: Final[List[str]] = ['development', 'staging', 'production']
+# System operation constants
+DEFAULT_ENCODING = 'utf-8'
+MAX_RETRIES = 3
+TIMEOUT_SECONDS = 30
 
-# Mapping for status code definitions
-STATUS_CODES: Final[Dict[int, str]] = {
-    200: 'OK',
-    400: 'BAD_REQUEST',
-    401: 'UNAUTHORIZED',
-    404: 'NOT_FOUND',
-    500: 'INTERNAL_SERVER_ERROR'
-}
+# Environment status flags
+IS_DEBUG = os.getenv('DEBUG', 'False') == 'True'
+ENVIRONMENT = os.getenv('APP_ENV', 'development')
 
-def get_status_description(code: int) -> str:
-    """Return the descriptive string for a given status code."""
-    return STATUS_CODES.get(code, 'UNKNOWN')
+# Resource limits
+CHUNK_SIZE = 8192
+BUFFER_SIZE = 1024 * 1024
 
-class AppConfig:
-    """Global application configuration constants."""
-    VERSION: Final[str] = "1.0.0"
-    BASE_DIR: Final[str] = "/opt/python-utils-39"
+# Standard error messages
+ERR_MISSING_CONFIG = "Missing required configuration key: {key}"
+ERR_CONNECTION_FAILED = "Failed to establish connection to {host}"
+
+def get_version():
+    """Return utility package version."""
+    return "1.0.4"
