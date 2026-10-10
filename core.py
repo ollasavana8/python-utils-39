@@ -1,35 +1,30 @@
-import functools
 import time
-from typing import Callable, Any, Dict
+import functools
+import logging
+from typing import Callable, Any
 
-# Cache dictionary for memoization of expensive function calls
-_FUNCTION_CACHE: Dict[tuple, Any] = {}
+logger = logging.getLogger(__name__)
 
-def memoize(func: Callable) -> Callable:
-    """Decorator to cache function results based on arguments."""
-    @functools.wraps(func)
-    def wrapper(*args, **kwargs) -> Any:
-        key = (func.__name__, args, frozenset(kwargs.items()))
-        if key not in _FUNCTION_CACHE:
-            _FUNCTION_CACHE[key] = func(*args, **kwargs)
-        return _FUNCTION_CACHE[key]
-    return wrapper
-
-def batch_process(data: list, chunk_size: int = 1000):
-    """Generator to process large datasets in memory-efficient chunks."""
-    for i in range(0, len(data), chunk_size):
-        yield data[i:i + chunk_size]
-
-class PerformanceTracker:
-    """Context manager for tracking block execution time."""
-    def __init__(self, label: str):
-        self.label = label
-        self.start_time = 0.0
-
-    def __enter__(self):
-        self.start_time = time.perf_counter()
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        elapsed = time.perf_counter() - self.start_time
-        print(f"[PERF] {self.label} finished in {elapsed:.4f}s")
+def retry_network_op(retries: int = 3, delay: float = 1.0, backoff: float = 2.0):
+    """
+    Decorator to retry network-bound operations with exponential backoff.
+    """
+    def decorator(func: Callable):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs) -> Any:
+            current_delay = delay
+            last_exception = None
+            
+            for attempt in range(retries):
+                try:
+                    return func(*args, **kwargs)
+                except (ConnectionError, TimeoutError) as e:
+                    last_exception = e
+                    logger.warning(f"Attempt {attempt + 1} failed: {e}. Retrying in {current_delay}s...")
+                    time.sleep(current_delay)
+                    current_delay *= backoff
+            
+            logger.error(f"Operation failed after {retries} attempts.")
+            raise last_exception
+        return wrapper
+    return decorator
