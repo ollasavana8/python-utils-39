@@ -1,27 +1,34 @@
 class ValidationError(Exception):
-    """Custom exception for input validation failures."""
+    """Custom exception for data validation failures."""
     pass
 
-def validate_input_data(data, required_keys):
-    """Ensures input dictionary contains required keys and values are non-empty."""
+def validate_input(data):
+    """Ensures input is a non-empty dictionary with expected keys."""
     if not isinstance(data, dict):
-        raise ValidationError("Input must be a dictionary")
+        raise ValidationError(f"Expected dict, got {type(data).__name__}")
     
-    for key in required_keys:
-        if key not in data:
-            raise ValidationError(f"Missing required field: {key}")
-        if data[key] is None or (isinstance(data[key], str) and not data[key].strip()):
-            raise ValidationError(f"Field '{key}' cannot be empty")
+    if 'id' not in data or 'payload' not in data:
+        raise ValidationError("Missing required fields: 'id' and 'payload'")
+    
+    if not isinstance(data['id'], int):
+        raise ValidationError("Field 'id' must be an integer")
 
-def process_main_loop(data_list, required_fields):
-    """Processes data list with validation step."""
-    processed_results = []
-    for entry in data_list:
+def process_stream(input_data):
+    """
+    Main processing loop with integrated input validation.
+    Handles data streams and logs validation outcomes.
+    """
+    results = []
+    for item in input_data:
         try:
-            validate_input_data(entry, required_fields)
-            # Mock business logic execution
-            processed_results.append(entry.get('id', 'unknown'))
+            validate_input(item)
+            # Perform business logic processing
+            processed = f"PROCESSED_{item['id']}"
+            results.append(processed)
         except ValidationError as e:
-            print(f"Skipping invalid entry: {e}")
+            print(f"Validation error for item {item}: {e}")
             continue
-    return processed_results
+        except Exception as e:
+            print(f"Unexpected error during processing: {e}")
+            continue
+    return results
