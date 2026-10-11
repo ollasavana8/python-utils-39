@@ -1,44 +1,30 @@
 import json
 import os
-from pathlib import Path
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict
 
+def load_config(filepath: str, defaults: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Loads configuration from a JSON file, merging with provided defaults.
+    Returns the configuration dictionary.
+    """
+    config = defaults.copy()
 
-class ConfigLoader:
-    """Configuration manager providing defaults, file parsing, and env overrides."""
+    if not os.path.exists(filepath):
+        return config
 
-    def __init__(self, defaults: Optional[Dict[str, Any]] = None) -> None:
-        self._defaults: Dict[str, Any] = defaults or {}
-        self._config: Dict[str, Any] = self._defaults.copy()
+    try:
+        with open(filepath, 'r') as f:
+            data = json.load(f)
+            if isinstance(data, dict):
+                config.update(data)
+    except (json.JSONDecodeError, IOError):
+        pass
 
-    def load_dict(self, data: Dict[str, Any]) -> None:
-        """Merge custom dictionary values into active config."""
-        self._config.update(data)
+    return config
 
-    def load_json(self, filepath: Union[str, Path]) -> None:
-        """Load configuration options from a JSON file."""
-        path = Path(filepath)
-        if not path.is_file():
-            raise FileNotFoundError(f"Configuration file not found: {path}")
-
-        with open(path, "r", encoding="utf-8") as file:
-            content = json.load(file)
-            if isinstance(content, dict):
-                self._config.update(content)
-            else:
-                raise ValueError("JSON config root must be an object")
-
-    def load_env(self, prefix: str = "APP_") -> None:
-        """Override options using environment variables with specified prefix."""
-        for key, value in os.environ.items():
-            if key.startswith(prefix):
-                config_key = key[len(prefix) :].lower()
-                self._config[config_key] = value
-
-    def get(self, key: str, fallback: Any = None) -> Any:
-        """Fetch a configuration value with fallback support."""
-        return self._config.get(key, fallback)
-
-    def as_dict(self) -> Dict[str, Any]:
-        """Return a copy of the final merged configuration."""
-        return self._config.copy()
+def save_config(filepath: str, config: Dict[str, Any]) -> None:
+    """
+    Persists the configuration dictionary to a JSON file.
+    """
+    with open(filepath, 'w') as f:
+        json.dump(config, f, indent=4)
