@@ -1,34 +1,32 @@
-class ValidationError(Exception):
-    """Custom exception for data validation failures."""
-    pass
+import re
+from typing import Any, Optional
 
-def validate_input(data):
-    """Ensures input is a non-empty dictionary with expected keys."""
-    if not isinstance(data, dict):
-        raise ValidationError(f"Expected dict, got {type(data).__name__}")
-    
-    if 'id' not in data or 'payload' not in data:
-        raise ValidationError("Missing required fields: 'id' and 'payload'")
-    
-    if not isinstance(data['id'], int):
-        raise ValidationError("Field 'id' must be an integer")
+# Regex pattern for basic email validation
+EMAIL_PATTERN = re.compile(r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$')
 
-def process_stream(input_data):
-    """
-    Main processing loop with integrated input validation.
-    Handles data streams and logs validation outcomes.
-    """
-    results = []
-    for item in input_data:
-        try:
-            validate_input(item)
-            # Perform business logic processing
-            processed = f"PROCESSED_{item['id']}"
-            results.append(processed)
-        except ValidationError as e:
-            print(f"Validation error for item {item}: {e}")
-            continue
-        except Exception as e:
-            print(f"Unexpected error during processing: {e}")
-            continue
-    return results
+class DataValidator:
+    """Utility class for common data validation tasks."""
+
+    @staticmethod
+    def is_email(email: Any) -> bool:
+        """Verify email string format."""
+        if not isinstance(email, str):
+            return False
+        return bool(EMAIL_PATTERN.match(email))
+
+    @staticmethod
+    def is_not_empty(value: Optional[str]) -> bool:
+        """Check for non-null and non-whitespace string."""
+        return isinstance(value, str) and len(value.strip()) > 0
+
+    @classmethod
+    def validate_range(cls, value: int, min_val: int, max_val: int) -> bool:
+        """Ensure integer is within inclusive boundaries."""
+        return isinstance(value, int) and min_val <= value <= max_val
+
+def validate_input(data: dict, schema: dict) -> bool:
+    """Core validation logic for dictionary payloads."""
+    for key, validator_func in schema.items():
+        if key not in data or not validator_func(data[key]):
+            return False
+    return True
