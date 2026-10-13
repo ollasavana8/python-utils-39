@@ -1,52 +1,27 @@
-"""Custom exception classes for python-utils-39.
+from typing import Optional
 
-This module defines the standard hierarchy of exceptions used across the
-utility library, allowing for precise error handling and rich error contexts.
-"""
+class BaseUtilsError(Exception):
+    """Base exception for the python-utils-39 library."""
+    pass
 
-from typing import Any, Dict, Optional
+class ConfigurationError(BaseUtilsError):
+    """Raised when configuration settings are invalid."""
+    pass
 
-
-class BaseUtilError(Exception):
-    """Base exception for all errors raised by this utility library."""
-
-    def __init__(self, message: str, details: Optional[Dict[str, Any]] = None) -> None:
-        """Initialize the base exception with a message and optional metadata.
-
-        Args:
-            message: A human-readable error description.
-            details: Optional dictionary containing additional error context.
-        """
+class ProcessingError(BaseUtilsError):
+    """Raised when data processing fails."""
+    def __init__(self, message: str, code: Optional[int] = None):
         super().__init__(message)
-        self.message: str = message
-        self.details: Dict[str, Any] = details or {}
+        self.code = code
 
-    def __str__(self) -> str:
-        if self.details:
-            return f"{self.message} (Context: {self.details})"
-        return self.message
+class ValidationError(BaseUtilsError):
+    """Raised when input validation fails."""
+    pass
 
+def raise_if_none(value: Optional[object], name: str) -> None:
+    """Helper to ensure required values are present."""
+    if value is None:
+        raise ValidationError(f"Required parameter '{name}' cannot be None.")
 
-class ValidationError(BaseUtilError):
-    """Exception raised when utility arguments or configuration fail validation."""
-
-
-class ConfigurationError(BaseUtilError):
-    """Exception raised when configuration parameters are missing or invalid."""
-
-
-class ResourceNotFoundError(BaseUtilError):
-    """Exception raised when a requested resource, file, or key is not found."""
-
-    def __init__(
-        self, message: str, resource_identifier: Optional[str] = None
-    ) -> None:
-        """Initialize with resource-specific identifier.
-
-        Args:
-            message: Description of the missing resource.
-            resource_identifier: The name or path of the missing resource.
-        """
-        details = {"resource": resource_identifier} if resource_identifier else None
-        super().__init__(message, details=details)
-        self.resource_identifier: Optional[str] = resource_identifier
+# Standardized exception hierarchy for consistent error handling
+# across all project modules.
