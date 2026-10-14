@@ -1,32 +1,25 @@
-import json
-import os
-from typing import Any, Dict, Optional
+import time
+import functools
+import logging
+from typing import Callable, Any, Type, Tuple
 
-def read_json(file_path: str) -> Optional[Dict[str, Any]]:
-    """Loads a JSON file and returns a dictionary."""
-    if not os.path.exists(file_path):
-        return None
-    with open(file_path, 'r', encoding='utf-8') as f:
-        return json.load(f)
+logger = logging.getLogger(__name__)
 
-def write_json(file_path: str, data: Dict[str, Any]) -> bool:
-    """Writes a dictionary to a JSON file."""
-    try:
-        with open(file_path, 'w', encoding='utf-8') as f:
-            json.dump(data, f, indent=4)
-        return True
-    except (IOError, TypeError):
-        return False
-
-def chunk_list(data: list, size: int):
-    """Splits a list into smaller chunks."""
-    for i in range(0, len(data), size):
-        yield data[i:i + size]
-
-def flatten_list(nested_list: list) -> list:
-    """Flattens a list of lists into a single list."""
-    return [item for sublist in nested_list for item in sublist]
-
-def get_env_variable(key: str, default: Any = None) -> Any:
-    """Retrieves environment variable with fallback."""
-    return os.environ.get(key, default)
+def retry(exceptions: Tuple[Type[Exception], ...], max_retries: int = 3, delay: float = 1.0):
+    """Decorator to retry network operations on specific exceptions."""
+    def decorator(func: Callable):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs) -> Any:
+            last_exception = None
+            for attempt in range(max_retries):
+                try:
+                    return func(*args, **kwargs)
+                except exceptions as e:
+                    last_exception = e
+                    logger.warning(f"Attempt {attempt + 1} failed: {e}. Retrying in {delay}s...")
+                    time.sleep(delay)
+            
+            logger.error(f"Operation failed after {max_retries} attempts.")
+            raise last_exception
+        return wrapper
+    return decorator
