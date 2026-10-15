@@ -1,34 +1,38 @@
 import logging
-from typing import Any, List, Optional
+from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
 class DataProcessor:
-    """Handles batch processing and data sanitization."""
+    """Handles data transformation with safety checks."""
 
-    def __init__(self, settings: Optional[dict] = None):
-        self.settings = settings or {}
-        self.strict_mode = self.settings.get('strict', False)
+    def process_input(self, data: Any) -> Optional[dict]:
+        try:
+            if not isinstance(data, dict):
+                raise ValueError(f"Expected dict, got {type(data).__name__}")
+            
+            if not data:
+                logger.warning("Empty data payload received")
+                return None
+                
+            # Simulate processing logic
+            result = {"status": "success", "payload": data}
+            return result
+            
+        except ValueError as ve:
+            logger.error(f"Validation error: {ve}")
+            return None
+        except Exception as e:
+            logger.critical(f"Unexpected system failure: {e}", exc_info=True)
+            return None
 
-    def sanitize(self, data: Any) -> Any:
-        """Removes null entries from dictionaries."""
-        if isinstance(data, dict):
-            return {k: v for k, v in data.items() if v is not None}
-        return data
-
-    def process_batch(self, items: List[Any]) -> List[Any]:
-        """Applies sanitization to a collection of items."""
+    def batch_process(self, items: list) -> list:
+        if not isinstance(items, list):
+            return []
+        
         results = []
         for item in items:
-            try:
-                cleaned = self.sanitize(item)
-                results.append(cleaned)
-            except Exception as e:
-                logger.error(f"processing error: {e}")
-                if self.strict_mode:
-                    raise
+            processed = self.process_input(item)
+            if processed:
+                results.append(processed)
         return results
-
-    def format_output(self, data: List[Any]) -> str:
-        """Serializes processed data to a string representation."""
-        return " | ".join(map(str, data))
