@@ -2,38 +2,35 @@ import functools
 import time
 from typing import Callable, Any, Dict
 
-def memoize_with_ttl(ttl_seconds: int = 300) -> Callable:
-    """Performance decorator for caching function results with TTL."""
-    def decorator(func: Callable) -> Callable:
-        cache: Dict[tuple, tuple] = {}
+# Cache for performance-critical transformations
+_memoization_cache: Dict[tuple, Any] = {}
 
-        @functools.wraps(func)
-        def wrapper(*args, **kwargs) -> Any:
-            key = (args, frozenset(kwargs.items()))
-            now = time.time()
-            
-            if key in cache:
-                result, timestamp = cache[key]
-                if now - timestamp < ttl_seconds:
-                    return result
-            
-            result = func(*args, **kwargs)
-            cache[key] = (result, now)
-            return result
-        return wrapper
-    return decorator
+def memoize(func: Callable) -> Callable:
+    """Decorator for caching function return values."""
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs) -> Any:
+        key = (func.__name__, args, frozenset(kwargs.items()))
+        if key not in _memoization_cache:
+            _memoization_cache[key] = func(*args, **kwargs)
+        return _memoization_cache[key]
+    return wrapper
 
-def bulk_process(items: list, chunk_size: int = 100) -> Any:
-    """Generator for efficient memory usage on large datasets."""
-    for i in range(0, len(items), chunk_size):
-        yield items[i:i + chunk_size]
+def batch_process(data: list, chunk_size: int = 100):
+    """Memory-efficient batch processing for large lists."""
+    for i in range(0, len(data), chunk_size):
+        yield data[i:i + chunk_size]
 
-class PerformanceOptimizer:
-    """Resource-conscious object wrapper for data operations."""
-    def __init__(self, data: list):
-        self._data = data
+def timed_execution(func: Callable) -> Callable:
+    """Profiler for measuring function latency."""
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs) -> Any:
+        start_time = time.perf_counter()
+        result = func(*args, **kwargs)
+        duration = time.perf_counter() - start_time
+        print(f"Execution of {func.__name__} took {duration:.4f}s")
+        return result
+    return wrapper
 
-    @property
-    def optimized_view(self) -> list:
-        # Pre-allocation to avoid dynamic list resizing
-        return [x for x in self._data if x is not None]
+def clear_cache() -> None:
+    """Memory management for memoization storage."""
+    _memoization_cache.clear()
