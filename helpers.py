@@ -1,51 +1,39 @@
-"""General utility helper functions for common data manipulation tasks."""
+import functools
+import time
+from typing import Callable, Any, Dict
 
-from typing import Any, Dict, Generator, Iterable, List, Optional, Type, TypeVar
+def memoize_with_ttl(ttl_seconds: int = 300) -> Callable:
+    """Performance decorator for caching function results with TTL."""
+    def decorator(func: Callable) -> Callable:
+        cache: Dict[tuple, tuple] = {}
 
-T = TypeVar('T')
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs) -> Any:
+            key = (args, frozenset(kwargs.items()))
+            now = time.time()
+            
+            if key in cache:
+                result, timestamp = cache[key]
+                if now - timestamp < ttl_seconds:
+                    return result
+            
+            result = func(*args, **kwargs)
+            cache[key] = (result, now)
+            return result
+        return wrapper
+    return decorator
 
+def bulk_process(items: list, chunk_size: int = 100) -> Any:
+    """Generator for efficient memory usage on large datasets."""
+    for i in range(0, len(items), chunk_size):
+        yield items[i:i + chunk_size]
 
-def chunk_iterable(iterable: Iterable[T], chunk_size: int) -> Generator[List[T], None, None]:
-    """Split an iterable into chunks of a specified size."""
-    if chunk_size <= 0:
-        raise ValueError("chunk_size must be a positive integer")
-    
-    chunk = []
-    for item in iterable:
-        chunk.append(item)
-        if len(chunk) == chunk_size:
-            yield chunk
-            chunk = []
-    if chunk:
-        yield chunk
+class PerformanceOptimizer:
+    """Resource-conscious object wrapper for data operations."""
+    def __init__(self, data: list):
+        self._data = data
 
-
-def safe_cast(val: Any, to_type: Type[T], default: Optional[T] = None) -> Optional[T]:
-    """Safely cast a value to a target type, returning default on failure."""
-    try:
-        return to_type(val)
-    except (ValueError, TypeError):
-        return default
-
-
-def flatten_dict(d: Dict[str, Any], parent_key: str = '', sep: str = '.') -> Dict[str, Any]:
-    """Flatten a nested dictionary structure using dot notation keys."""
-    items: List[tuple] = []
-    for k, v in d.items():
-        new_key = f"{parent_key}{sep}{k}" if parent_key else k
-        if isinstance(v, dict):
-            items.extend(flatten_dict(v, new_key, sep=sep).items())
-        else:
-            items.append((new_key, v))
-    return dict(items)
-
-
-def deep_merge(dict1: Dict[str, Any], dict2: Dict[str, Any]) -> Dict[str, Any]:
-    """Recursively merge two dictionaries, giving precedence to the second."""
-    result = dict1.copy()
-    for key, value in dict2.items():
-        if key in result and isinstance(result[key], dict) and isinstance(value, dict):
-            result[key] = deep_merge(result[key], value)
-        else:
-            result[key] = value
-    return result
+    @property
+    def optimized_view(self) -> list:
+        # Pre-allocation to avoid dynamic list resizing
+        return [x for x in self._data if x is not None]
