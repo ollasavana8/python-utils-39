@@ -1,63 +1,56 @@
-import functools
+"""Core utility framework for python-utils-39.
+
+Provides unified execution pipeline and dictionary restructuring utilities.
+"""
+
+from dataclasses import dataclass
+from typing import Any, Callable, Dict, List, Optional
 import time
-from typing import Any, Callable, Dict, Optional, Tuple
 
 
-class LRUTTLMemoryCache:
-    """A lightweight cache supporting maximum size and time-to-live (TTL) expiration."""
-
-    def __init__(self, maxsize: int = 1024, ttl_seconds: float = 60.0):
-        self.maxsize = maxsize
-        self.ttl_seconds = ttl_seconds
-        self._cache: Dict[Any, Tuple[Any, float]] = {}
-
-    def get(self, key: Any) -> Optional[Any]:
-        """Retrieve a non-expired cached value."""
-        if key not in self._cache:
-            return None
-        value, timestamp = self._cache[key]
-        if time.time() - timestamp > self.ttl_seconds:
-            del self._cache[key]
-            return None
-        return value
-
-    def set(self, key: Any, value: Any) -> None:
-        """Cache a value, evicting the oldest entry if size limit is exceeded."""
-        if len(self._cache) >= self.maxsize and key not in self._cache:
-            first_key = next(iter(self._cache))
-            del self._cache[first_key]
-        self._cache[key] = (value, time.time())
-
-    def clear(self) -> None:
-        """Purge all cached entries."""
-        self._cache.clear()
+@dataclass
+class ExecutionResult:
+    """Container for execution status and outcome metrics."""
+    success: bool
+    result: Optional[Any] = None
+    error: Optional[Exception] = None
+    duration_ms: float = 0.0
 
 
-def memoize_with_ttl(ttl_seconds: float = 300.0, maxsize: int = 512):
-    """Decorator to cache function results with TTL and capacity limits."""
-    cache = LRUTTLMemoryCache(maxsize=maxsize, ttl_seconds=ttl_seconds)
+class TaskPipeline:
+    """Sequential task processing pipeline with execution metrics tracking."""
 
-    def decorator(func: Callable) -> Callable:
-        @functools.wraps(func)
-        def wrapper(*args: Any, **kwargs: Any) -> Any:
-            key = (args, frozenset(kwargs.items()))
-            cached_result = cache.get(key)
-            if cached_result is not None:
-                return cached_result
-            result = func(*args, **kwargs)
-            cache.set(key, result)
-            return result
+    def __init__(self, name: str = "default_pipeline") -> None:
+        self.name = name
+        self.steps: List[Callable[[], Any]] = []
 
-        wrapper.cache_clear = cache.clear
-        return wrapper
+    def add_step(self, func: Callable[[], Any]) -> "TaskPipeline":
+        """Registers a callable step to the pipeline execution chain."""
+        self.steps.append(func)
+        return self
 
-    return decorator
+    def run(self) -> List[ExecutionResult]:
+        """Executes all registered pipeline steps sequentially."""
+        results: List[ExecutionResult] = []
+        for step in self.steps:
+            start_time = time.perf_counter()
+            try:
+                res = step()
+                elapsed = (time.perf_counter() - start_time) * 1000
+                results.append(ExecutionResult(success=True, result=res, duration_ms=elapsed))
+            except Exception as err:
+                elapsed = (time.perf_counter() - start_time) * 1000
+                results.append(ExecutionResult(success=False, error=err, duration_ms=elapsed))
+        return results
 
 
-@memoize_with_ttl(ttl_seconds=120.0, maxsize=2048)
-def fast_hash_transform(data: str, iterations: int = 100) -> str:
-    """Perform optimized iterative string transformation with memoized lookups."""
-    result = data
-    for _ in range(iterations):
-        result = f"{hash(result):x}"
-    return result
+def flatten_dict(data: Dict[str, Any], parent_key: str = "", sep: str = ".") -> Dict[str, Any]:
+    """Flattens nested dictionary structures into single-level key paths."""
+    items: List[tuple] = []
+    for key, value in data.items():
+        new_key = f"{parent_key}{sep}{key}" if parent_key else key
+        if isinstance(value, dict):
+            items.extend(flatten_dict(value, new_key, sep=sep).items())
+        else:
+            items.append((new_key, value))
+    return dict(items)
