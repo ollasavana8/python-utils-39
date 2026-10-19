@@ -1,34 +1,30 @@
 import logging
-import sys
-from typing import Optional
+from logging.handlers import RotatingFileHandler
+import os
 
-class DataLogger:
-    """Utility for standardized application logging."""
+def setup_logger(name: str, log_file: str = 'app.log', level: int = logging.INFO) -> logging.Logger:
+    """Configures a rotating file logger."""
+    logger = logging.getLogger(name)
+    logger.setLevel(level)
 
-    def __init__(self, name: str, level: int = logging.INFO):
-        self.logger = logging.getLogger(name)
-        self.logger.setLevel(level)
-        
-        # Standard console handler
-        handler = logging.StreamHandler(sys.stdout)
+    # Prevent duplicate handlers if logger is already configured
+    if not logger.handlers:
         formatter = logging.Formatter(
             '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
         )
+
+        # 5MB per file, keep 3 backups
+        handler = RotatingFileHandler(
+            log_file, 
+            maxBytes=5 * 1024 * 1024, 
+            backupCount=3
+        )
         handler.setFormatter(formatter)
-        
-        if not self.logger.handlers:
-            self.logger.addHandler(handler)
+        logger.addHandler(handler)
 
-    def info(self, message: str, context: Optional[dict] = None) -> None:
-        log_msg = f"{message} | context: {context}" if context else message
-        self.logger.info(log_msg)
+        # Add stream handler for console output
+        console_handler = logging.StreamHandler()
+        console_handler.setFormatter(formatter)
+        logger.addHandler(console_handler)
 
-    def error(self, message: str, exc: Optional[Exception] = None) -> None:
-        if exc:
-            self.logger.error(f"{message}: {str(exc)}", exc_info=True)
-        else:
-            self.logger.error(message)
-
-def get_logger(name: str) -> DataLogger:
-    """Factory method for logger instances."""
-    return DataLogger(name)
+    return logger
