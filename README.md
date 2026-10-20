@@ -1,41 +1,52 @@
 # python-utils-39
 
+A collection of lightweight, high-performance Python utilities designed to streamline daily development tasks. This library bridges common gaps in the standard library by providing robust helpers for data transformation, path manipulation, and logging.
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A lightweight, zero-dependency collection of helper functions designed to streamline daily Python development tasks. This library simplifies common operations like nested dictionary manipulation, robust datetime parsing, and safe file operations.
+## Key Features
 
-## Features
-
-* **Deep Dict Access**: Safely retrieve or set values in deeply nested dictionaries using dot-notation path keys.
-* **Smart Datetime Parsing**: Automatically convert chaotic, multi-format string timestamps into timezone-aware datetime objects.
-* **Atomic File Writing**: Prevent data corruption with safe write operations that use temporary files under the hood.
+*   **Smart File Operations:** Simplifies recursive file searching and batch renaming with intuitive, chainable syntax.
+*   **Data Validation Helpers:** Includes decorators to enforce strict type checking and schema validation for dictionary-based configurations.
+*   **Time-Series Converters:** Streamlined utility functions for handling timezone-aware ISO strings and Unix timestamp conversions.
+*   **Robust Logging Wrapper:** A pre-configured `log_utils` module that formats logs for cloud environments without external dependencies.
 
 ## Installation
 
-Install the package directly from PyPI:
+Install the package via pip:
 
 ```bash
 pip install python-utils-39
 ```
 
-## Quick Start
+Or, if you are working within a poetry-managed environment:
+
+```bash
+poetry add python-utils-39
+```
+
+## Basic Usage
+
+Import the necessary utility modules to enhance your script functionality immediately.
 
 ```python
-from python_utils_39 import deep_get, safe_write, parse_datetime
+from python_utils_39.files import find_files
+from python_utils_39.logger import get_logger
 
-# 1. Safely extract nested data
-data = {"user": {"profile": {"email": "developer@example.com"}}}
-email = deep_get(data, "user.profile.email")
-print(email)  # Output: developer@example.com
+# Initialize a structured logger
+logger = get_logger("app_main")
+logger.info("Starting file synchronization...")
 
-# 2. Parse unpredictable timestamps
-dt = parse_datetime("2023-10-27T15:30:00Z")
-print(dt.tzinfo)  # Output: UTC
+# Search for all JSON files in the current directory
+json_files = find_files(extension="json", recursive=True)
 
-# 3. Perform an atomic file write
-config_data = '{"theme": "dark", "volume": 80}'
-safe_write("config.json", config_data)
+for file in json_files:
+    logger.info(f"Processing: {file.name}")
 ```
+
+## Contributing
+
+We welcome contributions! Please open an issue to discuss proposed features or submit a pull request with unit tests included.
 
 ## License
 
