@@ -1,48 +1,30 @@
 import json
 import os
-from typing import Any, Dict, Optional, Union
-
+from typing import Any, Dict
 
 class ConfigLoader:
-    """Loads configuration settings with support for default fallback values."""
+    """Utility for loading JSON configurations with defaults."""
 
-    def __init__(self, defaults: Optional[Dict[str, Any]] = None) -> None:
-        self.defaults: Dict[str, Any] = defaults or {}
-        self._config: Dict[str, Any] = self.defaults.copy()
+    def __init__(self, default_config: Dict[str, Any]):
+        self.config = default_config
 
-    def _deep_merge(self, base: Dict[str, Any], update: Dict[str, Any]) -> Dict[str, Any]:
-        """Recursively merge updated values into the base configuration."""
-        merged = base.copy()
-        for key, value in update.items():
-            if key in merged and isinstance(merged[key], dict) and isinstance(value, dict):
-                merged[key] = self._deep_merge(merged[key], value)
-            else:
-                merged[key] = value
-        return merged
+    def load(self, file_path: str) -> Dict[str, Any]:
+        """Loads JSON file and merges with internal defaults."""
+        if not os.path.exists(file_path):
+            return self.config
 
-    def load_dict(self, config_dict: Dict[str, Any]) -> Dict[str, Any]:
-        """Load and merge configuration settings from a dictionary."""
-        self._config = self._deep_merge(self.defaults, config_dict)
-        return self._config
+        try:
+            with open(file_path, 'r') as f:
+                user_config = json.load(f)
+                return {**self.config, **user_config}
+        except (json.JSONDecodeError, IOError):
+            return self.config
 
-    def load_json(self, filepath: Union[str, os.PathLike]) -> Dict[str, Any]:
-        """Load and merge configuration settings from a JSON file."""
-        path = str(filepath)
-        if not os.path.exists(path):
-            raise FileNotFoundError(f"Config file not found at path: {path}")
+    def get(self, key: str, default: Any = None) -> Any:
+        """Retrieves a value from the current configuration."""
+        return self.config.get(key, default)
 
-        with open(path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-
-        return self.load_dict(data)
-
-    def get(self, key: str, fallback: Any = None) -> Any:
-        """Retrieve a configuration value using dot notation for nested keys."""
-        keys = key.split(".")
-        val = self._config
-        for k in keys:
-            if isinstance(val, dict) and k in val:
-                val = val[k]
-            else:
-                return fallback
-        return val
+def get_config(path: str, defaults: Dict[str, Any]) -> Dict[str, Any]:
+    """Helper function for quick configuration initialization."""
+    loader = ConfigLoader(defaults)
+    return loader.load(path)
