@@ -1,30 +1,31 @@
 import logging
-from logging.handlers import RotatingFileHandler
-import os
+import sys
+from typing import Optional
 
-def setup_logger(name: str, log_file: str = 'app.log', level: int = logging.INFO) -> logging.Logger:
-    """Configures a rotating file logger."""
-    logger = logging.getLogger(name)
-    logger.setLevel(level)
+class CustomLogger:
+    """Standardized logging utility for python-utils-39."""
 
-    # Prevent duplicate handlers if logger is already configured
-    if not logger.handlers:
-        formatter = logging.Formatter(
-            '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-        )
+    def __init__(self, name: str, level: int = logging.INFO):
+        self.logger = logging.getLogger(name)
+        self.logger.setLevel(level)
+        self._setup_handler()
 
-        # 5MB per file, keep 3 backups
-        handler = RotatingFileHandler(
-            log_file, 
-            maxBytes=5 * 1024 * 1024, 
-            backupCount=3
-        )
-        handler.setFormatter(formatter)
-        logger.addHandler(handler)
+    def _setup_handler(self) -> None:
+        """Configure console output formatting."""
+        if not self.logger.handlers:
+            formatter = logging.Formatter(
+                '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+            )
+            handler = logging.StreamHandler(sys.stdout)
+            handler.setFormatter(formatter)
+            self.logger.addHandler(handler)
 
-        # Add stream handler for console output
-        console_handler = logging.StreamHandler()
-        console_handler.setFormatter(formatter)
-        logger.addHandler(console_handler)
+    def info(self, message: str) -> None:
+        self.logger.info(message)
 
-    return logger
+    def error(self, message: str, exc_info: bool = False) -> None:
+        self.logger.error(message, exc_info=exc_info)
+
+def get_logger(name: str, level: int = logging.INFO) -> CustomLogger:
+    """Factory function for logger initialization."""
+    return CustomLogger(name, level)
