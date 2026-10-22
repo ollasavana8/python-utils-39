@@ -1,36 +1,40 @@
-import functools
-import time
-from typing import Callable, Any, Dict
+import os
+import shutil
+from typing import List, Optional
 
-# Cache for performance-critical transformations
-_memoization_cache: Dict[tuple, Any] = {}
+def clean_directory(path: str, extensions: Optional[List[str]] = None) -> int:
+    """Removes files with specified extensions from a directory."""
+    count = 0
+    if not os.path.exists(path):
+        return count
 
-def memoize(func: Callable) -> Callable:
-    """Decorator for caching function return values."""
-    @functools.wraps(func)
-    def wrapper(*args, **kwargs) -> Any:
-        key = (func.__name__, args, frozenset(kwargs.items()))
-        if key not in _memoization_cache:
-            _memoization_cache[key] = func(*args, **kwargs)
-        return _memoization_cache[key]
-    return wrapper
+    for item in os.listdir(path):
+        file_path = os.path.join(path, item)
+        if os.path.isfile(file_path):
+            if extensions is None or any(item.endswith(ext) for ext in extensions):
+                os.remove(file_path)
+                count += 1
+    return count
 
-def batch_process(data: list, chunk_size: int = 100):
-    """Memory-efficient batch processing for large lists."""
-    for i in range(0, len(data), chunk_size):
-        yield data[i:i + chunk_size]
+def reorganize_files(source: str, target: str, extension: str) -> int:
+    """Moves files of a specific type to a target directory."""
+    if not os.path.exists(target):
+        os.makedirs(target)
 
-def timed_execution(func: Callable) -> Callable:
-    """Profiler for measuring function latency."""
-    @functools.wraps(func)
-    def wrapper(*args, **kwargs) -> Any:
-        start_time = time.perf_counter()
-        result = func(*args, **kwargs)
-        duration = time.perf_counter() - start_time
-        print(f"Execution of {func.__name__} took {duration:.4f}s")
-        return result
-    return wrapper
+    moved = 0
+    for item in os.listdir(source):
+        if item.endswith(extension):
+            src_path = os.path.join(source, item)
+            dst_path = os.path.join(target, item)
+            shutil.move(src_path, dst_path)
+            moved += 1
+    return moved
 
-def clear_cache() -> None:
-    """Memory management for memoization storage."""
-    _memoization_cache.clear()
+def get_disk_usage(path: str) -> int:
+    """Calculates total size of directory contents in bytes."""
+    total_size = 0
+    for dirpath, _, filenames in os.walk(path):
+        for f in filenames:
+            fp = os.path.join(dirpath, f)
+            total_size += os.path.getsize(fp)
+    return total_size
