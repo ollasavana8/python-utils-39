@@ -1,31 +1,37 @@
 import logging
-import sys
+from logging.handlers import RotatingFileHandler
+from pathlib import Path
 from typing import Optional
 
-class CustomLogger:
-    """Standardized logging utility for python-utils-39."""
+def setup_logger(name: str, log_file: str = 'app.log', level: int = logging.INFO) -> logging.Logger:
+    """
+    Configures a logger with daily file rotation.
+    """
+    logger = logging.getLogger(name)
+    logger.setLevel(level)
 
-    def __init__(self, name: str, level: int = logging.INFO):
-        self.logger = logging.getLogger(name)
-        self.logger.setLevel(level)
-        self._setup_handler()
+    # Ensure directory exists
+    log_path = Path(log_file)
+    log_path.parent.mkdir(parents=True, exist_ok=True)
 
-    def _setup_handler(self) -> None:
-        """Configure console output formatting."""
-        if not self.logger.handlers:
-            formatter = logging.Formatter(
-                '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-            )
-            handler = logging.StreamHandler(sys.stdout)
-            handler.setFormatter(formatter)
-            self.logger.addHandler(handler)
+    # Prevent duplicate handlers if logger is re-initialized
+    if not logger.handlers:
+        # 5MB per file, keep 3 backup files
+        handler = RotatingFileHandler(
+            log_file, 
+            maxBytes=5 * 1024 * 1024, 
+            backupCount=3
+        )
+        
+        formatter = logging.Formatter(
+            '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        )
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
+        
+        # Add console output
+        console = logging.StreamHandler()
+        console.setFormatter(formatter)
+        logger.addHandler(console)
 
-    def info(self, message: str) -> None:
-        self.logger.info(message)
-
-    def error(self, message: str, exc_info: bool = False) -> None:
-        self.logger.error(message, exc_info=exc_info)
-
-def get_logger(name: str, level: int = logging.INFO) -> CustomLogger:
-    """Factory function for logger initialization."""
-    return CustomLogger(name, level)
+    return logger
