@@ -2,29 +2,28 @@ import json
 import os
 from typing import Any, Dict
 
-class ConfigLoader:
-    """Utility for loading JSON configurations with defaults."""
+def load_config(file_path: str, defaults: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Loads configuration from a JSON file, merging with provided defaults.
+    """
+    config = defaults.copy()
+    
+    if not os.path.exists(file_path):
+        return config
 
-    def __init__(self, default_config: Dict[str, Any]):
-        self.config = default_config
+    try:
+        with open(file_path, 'r') as f:
+            user_config = json.load(f)
+            if isinstance(user_config, dict):
+                config.update(user_config)
+    except (json.JSONDecodeError, IOError):
+        pass
 
-    def load(self, file_path: str) -> Dict[str, Any]:
-        """Loads JSON file and merges with internal defaults."""
-        if not os.path.exists(file_path):
-            return self.config
+    return config
 
-        try:
-            with open(file_path, 'r') as f:
-                user_config = json.load(f)
-                return {**self.config, **user_config}
-        except (json.JSONDecodeError, IOError):
-            return self.config
-
-    def get(self, key: str, default: Any = None) -> Any:
-        """Retrieves a value from the current configuration."""
-        return self.config.get(key, default)
-
-def get_config(path: str, defaults: Dict[str, Any]) -> Dict[str, Any]:
-    """Helper function for quick configuration initialization."""
-    loader = ConfigLoader(defaults)
-    return loader.load(path)
+def save_config(file_path: str, config: Dict[str, Any]) -> None:
+    """
+    Persists configuration dictionary to a JSON file.
+    """
+    with open(file_path, 'w') as f:
+        json.dump(config, f, indent=4)
