@@ -1,44 +1,34 @@
 import functools
-import logging
-import random
 import time
-from typing import Any, Callable, Tuple, Type
+from typing import Callable, Any, Dict
 
-logger = logging.getLogger(__name__)
+# Cache for compute-intensive function results
+_CACHE: Dict[str, Any] = {}
 
+def memoize(func: Callable) -> Callable:
+    """Decorator for caching function return values."""
+    @functools.wraps(func)
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
+        key = f"{func.__name__}:{args}:{kwargs}"
+        if key not in _CACHE:
+            _CACHE[key] = func(*args, **kwargs)
+        return _CACHE[key]
+    return wrapper
 
-def retry_network_op(
-    max_retries: int = 3,
-    backoff_factor: float = 0.5,
-    exceptions: Tuple[Type[BaseException], ...] = (Exception,),
-    jitter: bool = True,
-) -> Callable:
-    """Decorator to retry network operations with exponential backoff and jitter."""
-
-    def decorator(func: Callable) -> Callable:
+class PerformanceOptimizer:
+    """Utility class for execution time tracking."""
+    @staticmethod
+    def profile_execution(func: Callable) -> Callable:
         @functools.wraps(func)
-        def wrapper(*args: Any, **kwargs: Any) -> Any:
-            retries = 0
-            while True:
-                try:
-                    return func(*args, **kwargs)
-                except exceptions as exc:
-                    retries += 1
-                    if retries > max_retries:
-                        logger.error(
-                            f"Function '{func.__name__}' failed after {max_retries} retries: {exc}"
-                        )
-                        raise
-
-                    sleep_time = backoff_factor * (2 ** (retries - 1))
-                    if jitter:
-                        sleep_time += random.uniform(0, sleep_time * 0.1)
-
-                    logger.warning(
-                        f"Attempt {retries}/{max_retries} for '{func.__name__}' failed ({exc}). Retrying in {sleep_time:.2f}s..."
-                    )
-                    time.sleep(sleep_time)
-
+        def wrapper(*args, **kwargs):
+            start_time = time.perf_counter()
+            result = func(*args, **kwargs)
+            end_time = time.perf_counter()
+            # Log performance metrics in production environments
+            print(f"Execution of {func.__name__}: {end_time - start_time:.6f}s")
+            return result
         return wrapper
 
-    return decorator
+def clear_optimization_cache() -> None:
+    """Manual invalidation of global memoization cache."""
+    _CACHE.clear()
