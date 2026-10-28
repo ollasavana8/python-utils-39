@@ -1,38 +1,34 @@
-import logging
-from typing import Any, Callable, Optional
+import json
+from typing import Any, Dict, Optional
+from pathlib import Path
 
-logger = logging.getLogger(__name__)
+def load_json_data(file_path: str) -> Dict[str, Any]:
+    """Reads and parses JSON file with error handling."""
+    path = Path(file_path)
+    if not path.exists():
+        return {}
+    
+    try:
+        with open(path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except (json.JSONDecodeError, IOError):
+        return {}
 
-class OperationHandler:
-    def __init__(self, retries: int = 3):
-        self.retries = retries
+def save_json_data(data: Dict[str, Any], file_path: str) -> bool:
+    """Writes data to a JSON file safely."""
+    try:
+        with open(file_path, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=4, sort_keys=True)
+        return True
+    except (TypeError, IOError):
+        return False
 
-    def execute(self, func: Callable, *args: Any, **kwargs: Any) -> Optional[Any]:
-        """Executes a callable with basic error handling and retry logic."""
-        attempt = 0
-        while attempt <= self.retries:
-            try:
-                return func(*args, **kwargs)
-            except ValueError as ve:
-                logger.error(f"Invalid input encountered: {ve}")
-                break
-            except ConnectionError as ce:
-                attempt += 1
-                if attempt > self.retries:
-                    logger.critical("Max retries reached for connection.")
-                    raise ce
-                logger.warning(f"Retry {attempt}/{self.retries} after connection failure")
-            except Exception as e:
-                logger.exception(f"Unexpected system error: {e}")
-                return None
-        return None
-
-def safe_wrapper(func: Callable) -> Callable:
-    """Decorator for capturing and logging execution errors."""
-    def wrapper(*args, **kwargs):
-        try:
-            return func(*args, **kwargs)
-        except Exception as e:
-            logger.error(f"Execution failed in {func.__name__}: {e}")
-            return None
-    return wrapper
+def merge_data(base: Dict[str, Any], updates: Dict[str, Any]) -> Dict[str, Any]:
+    """Deep merge for nested configuration dictionaries."""
+    result = base.copy()
+    for key, value in updates.items():
+        if isinstance(value, dict) and key in result and isinstance(result[key], dict):
+            result[key] = merge_data(result[key], value)
+        else:
+            result[key] = value
+    return result
