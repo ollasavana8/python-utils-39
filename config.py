@@ -1,29 +1,36 @@
-import json
 import os
 from typing import Any, Dict
 
-def load_config(file_path: str, defaults: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Loads configuration from a JSON file, merging with provided defaults.
-    """
-    config = defaults.copy()
+class ConfigManager:
+    """Handles application environment settings and defaults."""
     
-    if not os.path.exists(file_path):
-        return config
+    def __init__(self, prefix: str = "APP_"):
+        self.prefix = prefix
+        self.settings: Dict[str, Any] = {}
 
-    try:
-        with open(file_path, 'r') as f:
-            user_config = json.load(f)
-            if isinstance(user_config, dict):
-                config.update(user_config)
-    except (json.JSONDecodeError, IOError):
-        pass
+    def load_from_env(self) -> None:
+        """Extracts prefixed variables from system environment."""
+        for key, value in os.environ.items():
+            if key.startswith(self.prefix):
+                clean_key = key[len(self.prefix):].lower()
+                self.settings[clean_key] = self.parse_value(value)
 
-    return config
+    @staticmethod
+    def parse_value(value: str) -> Any:
+        """Coerces string values into appropriate python types."""
+        if value.lower() in ('true', 'yes', 'on'):
+            return True
+        if value.lower() in ('false', 'no', 'off'):
+            return False
+        try:
+            return int(value)
+        except ValueError:
+            return value
 
-def save_config(file_path: str, config: Dict[str, Any]) -> None:
-    """
-    Persists configuration dictionary to a JSON file.
-    """
-    with open(file_path, 'w') as f:
-        json.dump(config, f, indent=4)
+    def get(self, key: str, default: Any = None) -> Any:
+        """Retrieves setting by key with fallback."""
+        return self.settings.get(key, default)
+
+# Initialize default instance
+default_config = ConfigManager()
+default_config.load_from_env()
