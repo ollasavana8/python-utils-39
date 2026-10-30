@@ -1,53 +1,51 @@
 # python-utils-39
 
-A collection of lightweight, high-performance Python utilities designed to streamline daily development tasks. This library bridges common gaps in the standard library by providing robust helpers for data transformation, path manipulation, and logging.
+A collection of lightweight, high-performance utility functions designed to streamline daily Python development. This library reduces boilerplate code for common file operations, string manipulation, and system-level tasks.
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+## Features
 
-## Key Features
-
-*   **Smart File Operations:** Simplifies recursive file searching and batch renaming with intuitive, chainable syntax.
-*   **Data Validation Helpers:** Includes decorators to enforce strict type checking and schema validation for dictionary-based configurations.
-*   **Time-Series Converters:** Streamlined utility functions for handling timezone-aware ISO strings and Unix timestamp conversions.
-*   **Robust Logging Wrapper:** A pre-configured `log_utils` module that formats logs for cloud environments without external dependencies.
+*   **File Streamliner:** Simplified decorators and context managers for atomic file writes and recursive directory scanning.
+*   **Data Normalization:** Robust helper functions to clean, validate, and transform nested dictionaries and lists.
+*   **System Helpers:** Cross-platform wrappers for executing shell commands with real-time timeout and logging capabilities.
+*   **Format Converters:** Built-in tools for seamless conversion between JSON, YAML, and CSV formats with custom schema support.
 
 ## Installation
 
-Install the package via pip:
+Install `python-utils-39` via pip:
 
 ```bash
 pip install python-utils-39
 ```
 
-Or, if you are working within a poetry-managed environment:
+Or, add it to your `requirements.txt`:
 
-```bash
-poetry add python-utils-39
+```text
+python-utils-39>=1.0.0
 ```
 
 ## Basic Usage
 
-Import the necessary utility modules to enhance your script functionality immediately.
+Quickly manage file I/O and perform data normalization using the core utilities:
 
 ```python
-from python_utils_39.files import find_files
-from python_utils_39.logger import get_logger
+from pyutils39 import file_io, data_tools
 
-# Initialize a structured logger
-logger = get_logger("app_main")
-logger.info("Starting file synchronization...")
+# Efficiently read and transform nested data
+raw_data = {"user": {"id": 123, "meta": None}}
+clean_data = data_tools.strip_nulls(raw_data)
 
-# Search for all JSON files in the current directory
-json_files = find_files(extension="json", recursive=True)
+# Safe atomic writing
+file_io.safe_write("config.json", clean_data, format="json")
 
-for file in json_files:
-    logger.info(f"Processing: {file.name}")
+print(f"Processed: {clean_data}")
 ```
 
 ## Contributing
 
-We welcome contributions! Please open an issue to discuss proposed features or submit a pull request with unit tests included.
+Contributions are welcome! Please feel free to submit a Pull Request for any bug fixes or improvements to existing utility modules. Ensure all new features include unit tests in the `/tests` directory.
 
 ## License
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
