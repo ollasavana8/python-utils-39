@@ -1,26 +1,26 @@
-import os
+import re
+from typing import Final
 
-# Application path configurations
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-LOG_DIR = os.path.join(BASE_DIR, 'logs')
+# Date and Time patterns
+ISO_DATE_FORMAT: Final[str] = "%Y-%m-%d"
+ISO_DATETIME_FORMAT: Final[str] = "%Y-%m-%dT%H:%M:%S%z"
 
-# System operation constants
-DEFAULT_ENCODING = 'utf-8'
-MAX_RETRIES = 3
-TIMEOUT_SECONDS = 30
+# Regex patterns for validation
+EMAIL_REGEX: Final[re.Pattern] = re.compile(r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$')
+URL_REGEX: Final[re.Pattern] = re.compile(r'https?://(?:[-\w.]|(?:%[\da-fA-F]{2}))+')
 
-# Environment status flags
-IS_DEBUG = os.getenv('DEBUG', 'False') == 'True'
-ENVIRONMENT = os.getenv('APP_ENV', 'development')
+# Pagination defaults
+DEFAULT_PAGE_SIZE: Final[int] = 20
+MAX_PAGE_SIZE: Final[int] = 100
 
-# Resource limits
-CHUNK_SIZE = 8192
-BUFFER_SIZE = 1024 * 1024
+# File system defaults
+DEFAULT_ENCODING: Final[str] = "utf-8"
+CHUNK_SIZE_BYTES: Final[int] = 8192
 
-# Standard error messages
-ERR_MISSING_CONFIG = "Missing required configuration key: {key}"
-ERR_CONNECTION_FAILED = "Failed to establish connection to {host}"
-
-def get_version():
-    """Return utility package version."""
-    return "1.0.4"
+# HTTP status code references for readability
+HTTP_OK: Final[int] = 200
+HTTP_CREATED: Final[int] = 201
+HTTP_BAD_REQUEST: Final[int] = 400
+HTTP_UNAUTHORIZED: Final[int] = 401
+HTTP_NOT_FOUND: Final[int] = 404
+HTTP_SERVER_ERROR: Final[int] = 500
