@@ -1,73 +1,51 @@
-"""Data processing utilities with robust edge case handling."""
+"""Batch data processor with built-in input validation."""
 
-from typing import Any, Callable, Dict, List, Optional, Union
+import logging
+from typing import Any, Dict, List, Tuple
 
-
-def safe_cast(value: Any, target_type: type, default: Any = None) -> Any:
-    """Safely cast a value to a target type without raising exceptions."""
-    if value is None:
-        return default
-    try:
-        return target_type(value)
-    except (ValueError, TypeError, OverflowError):
-        return default
+logger = logging.getLogger(__name__)
 
 
-def safe_divide(numerator: Any, denominator: Any, default: Union[int, float] = 0.0) -> float:
-    """Perform division with zero and non-numeric edge case protection."""
-    num = safe_cast(numerator, float)
-    den = safe_cast(denominator, float)
-    
-    if num is None or den is None or den == 0.0:
-        return float(default)
-    
-    try:
-        return num / den
-    except (ZeroDivisionError, OverflowError):
-        return float(default)
+class ValidationError(Exception):
+    """Raised when input item fails schema or domain validation."""
+    pass
 
 
-def safe_get_nested(data: Any, keys: List[Union[str, int]], default: Any = None) -> Any:
-    """Traverse nested dicts or lists safely handling missing keys and index errors."""
-    if not isinstance(keys, (list, tuple)):
-        return default
-    
-    current = data
-    for key in keys:
-        if isinstance(current, dict) and isinstance(key, str):
-            current = current.get(key, default)
-        elif isinstance(current, (list, tuple)) and isinstance(key, int):
-            try:
-                current = current[key]
-            except IndexError:
-                return default
-        else:
-            return default
-        
-        if current is default:
-            break
-            
-    return current
+def validate_item(item: Any) -> Dict[str, Any]:
+    """Validate item structure and data types before processing."""
+    if not isinstance(item, dict):
+        raise ValidationError(f"Expected dict, got {type(item).__name__}")
+
+    if "id" not in item or item["id"] is None:
+        raise ValidationError("Missing required field: 'id'")
+
+    if "payload" in item and not isinstance(item["payload"], (str, dict, list)):
+        raise ValidationError(f"Invalid payload type: {type(item['payload']).__name__}")
+
+    return item
 
 
-def process_batch_safely(
-    items: List[Any], 
-    transform: Callable[[Any], Any], 
-    skip_errors: bool = True
-) -> Dict[str, Any]:
-    """Process a batch of items with error isolation per item."""
-    results = []
-    errors = []
-    
-    if not isinstance(items, (list, tuple, set)):
-        return {"results": [], "errors": [{"index": -1, "error": "Invalid iterable provided"}]}
+def process_records(
+    records: List[Any], allow_failures: bool = True
+) -> Tuple[List[Dict[str, Any]], List[Dict[str, str]]]:
+    """Main processing loop with input validation for incoming batch items."""
+    processed_results: List[Dict[str, Any]] = []
+    errors: List[Dict[str, str]] = []
 
-    for idx, item in enumerate(items):
+    for idx, raw_record in enumerate(records):
         try:
-            results.append(transform(item))
-        except Exception as exc:
-            errors.append({"index": idx, "item": str(item), "error": str(exc)})
-            if not skip_errors:
-                break
-                
-    return {"results": results, "errors": errors}
+            validated = validate_item(raw_record)
+            result = {
+                "id": validated["id"],
+                "status": "completed",
+                "size": len(str(validated.get("payload", ""))),
+            }
+            processed_results.append(result)
+        except ValidationError as err:
+            err_msg = f"Record at index {idx} failed validation: {err}"
+            logger.warning(err_msg)
+            errors.append({"index": str(idx), "error": str(err)})
+            if not allow_failures:
+                raise ValidationError(err_msg) from err
+
+    return processed_results, errors
