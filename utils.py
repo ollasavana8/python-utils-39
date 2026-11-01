@@ -1,33 +1,44 @@
-import json
-import os
-from typing import Any, Dict, List, Optional
+import math
+from typing import Any, Dict, Generator, Iterable, List, TypeVar
 
-def load_json(filepath: str) -> Dict[str, Any]:
-    """Load and parse JSON file contents."""
-    if not os.path.exists(filepath):
-        return {}
-    with open(filepath, 'r', encoding='utf-8') as f:
-        return json.load(f)
+T = TypeVar("T")
 
-def save_json(data: Any, filepath: str) -> None:
-    """Write data to a JSON file with formatting."""
-    with open(filepath, 'w', encoding='utf-8') as f:
-        json.dump(data, f, indent=4, sort_keys=True)
 
-def flatten_list(nested_list: List[Any]) -> List[Any]:
-    """Flatten a nested list of items."""
-    flat = []
-    for item in nested_list:
-        if isinstance(item, list):
-            flat.extend(flatten_list(item))
+def chunk_iterable(iterable: Iterable[T], size: int) -> Generator[List[T], None, None]:
+    """Yield successive chunks of specified size from an iterable."""
+    if size <= 0:
+        raise ValueError("Chunk size must be greater than zero.")
+    chunk = []
+    for item in iterable:
+        chunk.append(item)
+        if len(chunk) == size:
+            yield chunk
+            chunk = []
+    if chunk:
+        yield chunk
+
+
+def deep_merge(dict1: Dict[str, Any], dict2: Dict[str, Any]) -> Dict[str, Any]:
+    """Recursively merge two dictionaries without mutating originals."""
+    result = dict1.copy()
+    for key, value in dict2.items():
+        if key in result and isinstance(result[key], dict) and isinstance(value, dict):
+            result[key] = deep_merge(result[key], value)
         else:
-            flat.append(item)
-    return flat
+            result[key] = value
+    return result
 
-def chunk_list(data: List[Any], size: int) -> List[List[Any]]:
-    """Split list into chunks of specific size."""
-    return [data[i:i + size] for i in range(0, len(data), size)]
 
-def get_env_var(key: str, default: Optional[str] = None) -> str:
-    """Retrieve environment variable with fallback."""
-    return os.environ.get(key, default or "")
+def format_bytes(num_bytes: float) -> str:
+    """Convert standard byte count into a human-readable string representation."""
+    if num_bytes < 0:
+        raise ValueError("Byte count cannot be negative.")
+    units = ["B", "KB", "MB", "GB", "TB", "PB"]
+    unit_index = 0
+    value = float(num_bytes)
+
+    while value >= 1024.0 and unit_index < len(units) - 1:
+        value /= 1024.0
+        unit_index += 1
+
+    return f"{value:.2f} {units[unit_index]}"
