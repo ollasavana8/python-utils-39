@@ -1,44 +1,28 @@
-import math
-from typing import Any, Dict, Generator, Iterable, List, TypeVar
+import collections.abc
+from typing import Any, Dict, List, Union
 
-T = TypeVar("T")
+def deep_flatten(items: Iterable) -> List[Any]:
+    """Flatten nested sequences into a single list."""
+    result = []
+    for item in items:
+        if isinstance(item, (list, tuple, set)) and not isinstance(item, (str, bytes)):
+            result.extend(deep_flatten(item))
+        else:
+            result.append(item)
+    return result
 
-
-def chunk_iterable(iterable: Iterable[T], size: int) -> Generator[List[T], None, None]:
-    """Yield successive chunks of specified size from an iterable."""
-    if size <= 0:
-        raise ValueError("Chunk size must be greater than zero.")
-    chunk = []
-    for item in iterable:
-        chunk.append(item)
-        if len(chunk) == size:
-            yield chunk
-            chunk = []
-    if chunk:
-        yield chunk
-
-
-def deep_merge(dict1: Dict[str, Any], dict2: Dict[str, Any]) -> Dict[str, Any]:
-    """Recursively merge two dictionaries without mutating originals."""
+def merge_dicts(dict1: Dict, dict2: Dict) -> Dict:
+    """Recursively merge two dictionaries."""
     result = dict1.copy()
     for key, value in dict2.items():
         if key in result and isinstance(result[key], dict) and isinstance(value, dict):
-            result[key] = deep_merge(result[key], value)
+            result[key] = merge_dicts(result[key], value)
         else:
             result[key] = value
     return result
 
+def sanitize_keys(data: Dict[str, Any], prefix: str = "_") -> Dict[str, Any]:
+    """Prefix dictionary keys with provided string."""
+    return {f"{prefix}{k}": v for k, v in data.items()}
 
-def format_bytes(num_bytes: float) -> str:
-    """Convert standard byte count into a human-readable string representation."""
-    if num_bytes < 0:
-        raise ValueError("Byte count cannot be negative.")
-    units = ["B", "KB", "MB", "GB", "TB", "PB"]
-    unit_index = 0
-    value = float(num_bytes)
-
-    while value >= 1024.0 and unit_index < len(units) - 1:
-        value /= 1024.0
-        unit_index += 1
-
-    return f"{value:.2f} {units[unit_index]}"
+from typing import Iterable
