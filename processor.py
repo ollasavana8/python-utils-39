@@ -1,51 +1,30 @@
-"""Batch data processor with built-in input validation."""
+from typing import Any, Iterable, Dict, List, Optional
 
-import logging
-from typing import Any, Dict, List, Tuple
+def batch_process(data: Iterable[Any], chunk_size: int = 100) -> List[List[Any]]:
+    """Split data into smaller chunks for batch operations."""
+    if chunk_size <= 0:
+        raise ValueError("chunk_size must be a positive integer")
+    
+    data_list = list(data)
+    return [data_list[i : i + chunk_size] for i in range(0, len(data_list), chunk_size)]
 
-logger = logging.getLogger(__name__)
+def extract_nested_key(data: Dict[str, Any], keys: str, delimiter: str = '.') -> Optional[Any]:
+    """Retrieve value from nested dictionary using dot notation."""
+    parts = keys.split(delimiter)
+    current = data
+    
+    try:
+        for part in parts:
+            current = current[part]
+        return current
+    except (KeyError, TypeError):
+        return None
 
+def sanitize_payload(data: Dict[str, Any], allowed_keys: Iterable[str]) -> Dict[str, Any]:
+    """Filter dictionary to include only permitted keys."""
+    return {k: v for k, v in data.items() if k in allowed_keys}
 
-class ValidationError(Exception):
-    """Raised when input item fails schema or domain validation."""
-    pass
-
-
-def validate_item(item: Any) -> Dict[str, Any]:
-    """Validate item structure and data types before processing."""
-    if not isinstance(item, dict):
-        raise ValidationError(f"Expected dict, got {type(item).__name__}")
-
-    if "id" not in item or item["id"] is None:
-        raise ValidationError("Missing required field: 'id'")
-
-    if "payload" in item and not isinstance(item["payload"], (str, dict, list)):
-        raise ValidationError(f"Invalid payload type: {type(item['payload']).__name__}")
-
-    return item
-
-
-def process_records(
-    records: List[Any], allow_failures: bool = True
-) -> Tuple[List[Dict[str, Any]], List[Dict[str, str]]]:
-    """Main processing loop with input validation for incoming batch items."""
-    processed_results: List[Dict[str, Any]] = []
-    errors: List[Dict[str, str]] = []
-
-    for idx, raw_record in enumerate(records):
-        try:
-            validated = validate_item(raw_record)
-            result = {
-                "id": validated["id"],
-                "status": "completed",
-                "size": len(str(validated.get("payload", ""))),
-            }
-            processed_results.append(result)
-        except ValidationError as err:
-            err_msg = f"Record at index {idx} failed validation: {err}"
-            logger.warning(err_msg)
-            errors.append({"index": str(idx), "error": str(err)})
-            if not allow_failures:
-                raise ValidationError(err_msg) from err
-
-    return processed_results, errors
+if __name__ == "__main__":
+    # Example usage for verification
+    sample = {"user": {"profile": {"id": 123}}}
+    print(extract_nested_key(sample, "user.profile.id"))
