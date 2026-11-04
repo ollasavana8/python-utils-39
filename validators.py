@@ -1,32 +1,33 @@
 import re
-from typing import Any, Optional
+from functools import lru_cache
+from typing import Optional
 
-# Regex pattern for basic email validation
-EMAIL_PATTERN = re.compile(r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$')
+# Pre-compile regex patterns for performance
+_EMAIL_REGEX = re.compile(r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$')
 
-class DataValidator:
-    """Utility class for common data validation tasks."""
+@lru_cache(maxsize=128)
+def validate_email_format(email: str) -> bool:
+    """Validates email format using cached regex evaluation."""
+    if not isinstance(email, str):
+        return False
+    return bool(_EMAIL_REGEX.match(email))
 
-    @staticmethod
-    def is_email(email: Any) -> bool:
-        """Verify email string format."""
-        if not isinstance(email, str):
-            return False
-        return bool(EMAIL_PATTERN.match(email))
+def sanitize_input(value: str) -> str:
+    """Strips whitespace and normalizes string input."""
+    if not isinstance(value, str):
+        return ''
+    return value.strip()
 
-    @staticmethod
-    def is_not_empty(value: Optional[str]) -> bool:
-        """Check for non-null and non-whitespace string."""
-        return isinstance(value, str) and len(value.strip()) > 0
+def batch_validate(items: list[str]) -> list[bool]:
+    """Efficient batch validation using cached function calls."""
+    return [validate_email_format(item) for item in items]
 
-    @classmethod
-    def validate_range(cls, value: int, min_val: int, max_val: int) -> bool:
-        """Ensure integer is within inclusive boundaries."""
-        return isinstance(value, int) and min_val <= value <= max_val
+class ValidatorContext:
+    """Contextual wrapper for validation logic."""
+    def __init__(self, strict: bool = True):
+        self.strict = strict
 
-def validate_input(data: dict, schema: dict) -> bool:
-    """Core validation logic for dictionary payloads."""
-    for key, validator_func in schema.items():
-        if key not in data or not validator_func(data[key]):
-            return False
-    return True
+    def check(self, email: Optional[str]) -> bool:
+        if email is None:
+            return not self.strict
+        return validate_email_format(email)
