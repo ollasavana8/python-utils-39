@@ -1,28 +1,27 @@
-import collections.abc
-from typing import Any, Dict, List, Union
+import time
+import functools
+import logging
 
-def deep_flatten(items: Iterable) -> List[Any]:
-    """Flatten nested sequences into a single list."""
-    result = []
-    for item in items:
-        if isinstance(item, (list, tuple, set)) and not isinstance(item, (str, bytes)):
-            result.extend(deep_flatten(item))
-        else:
-            result.append(item)
-    return result
+logger = logging.getLogger(__name__)
 
-def merge_dicts(dict1: Dict, dict2: Dict) -> Dict:
-    """Recursively merge two dictionaries."""
-    result = dict1.copy()
-    for key, value in dict2.items():
-        if key in result and isinstance(result[key], dict) and isinstance(value, dict):
-            result[key] = merge_dicts(result[key], value)
-        else:
-            result[key] = value
-    return result
-
-def sanitize_keys(data: Dict[str, Any], prefix: str = "_") -> Dict[str, Any]:
-    """Prefix dictionary keys with provided string."""
-    return {f"{prefix}{k}": v for k, v in data.items()}
-
-from typing import Iterable
+def retry_network_op(retries=3, delay=2, backoff=2):
+    """Decorator for retrying network operations with exponential backoff."""
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            current_delay = delay
+            last_exception = None
+            
+            for attempt in range(retries):
+                try:
+                    return func(*args, **kwargs)
+                except (ConnectionError, TimeoutError) as e:
+                    last_exception = e
+                    logger.warning(f"Attempt {attempt + 1} failed: {e}. Retrying in {current_delay}s...")
+                    time.sleep(current_delay)
+                    current_delay *= backoff
+            
+            logger.error("Max retries reached. Operation failed.")
+            raise last_exception
+        return wrapper
+    return decorator
