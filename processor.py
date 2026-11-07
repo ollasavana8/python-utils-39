@@ -1,30 +1,48 @@
-from typing import Any, Iterable, Dict, List, Optional
+"""Data processing utilities for batching, dictionary manipulation, and sequence formatting."""
 
-def batch_process(data: Iterable[Any], chunk_size: int = 100) -> List[List[Any]]:
-    """Split data into smaller chunks for batch operations."""
+from typing import Any, Dict, Generator, List, Sequence, TypeVar
+
+T = TypeVar("T")
+
+
+def chunk_sequence(data: Sequence[T], chunk_size: int) -> Generator[List[T], None, None]:
+    """Yield successive chunks of a specified size from a sequence."""
     if chunk_size <= 0:
         raise ValueError("chunk_size must be a positive integer")
-    
-    data_list = list(data)
-    return [data_list[i : i + chunk_size] for i in range(0, len(data_list), chunk_size)]
+    for i in range(0, len(data), chunk_size):
+        yield list(data[i : i + chunk_size])
 
-def extract_nested_key(data: Dict[str, Any], keys: str, delimiter: str = '.') -> Optional[Any]:
-    """Retrieve value from nested dictionary using dot notation."""
-    parts = keys.split(delimiter)
+
+def flatten_dict(d: Dict[str, Any], parent_key: str = "", sep: str = ".") -> Dict[str, Any]:
+    """Flatten a nested dictionary into a single-level dictionary with delimited keys."""
+    items: List[tuple[str, Any]] = []
+    for key, value in d.items():
+        new_key = f"{parent_key}{sep}{key}" if parent_key else key
+        if isinstance(value, dict):
+            items.extend(flatten_dict(value, new_key, sep=sep).items())
+        else:
+            items.append((new_key, value))
+    return dict(items)
+
+
+def safe_get(data: Dict[str, Any], key_path: str, default: Any = None, sep: str = ".") -> Any:
+    """Retrieve a value from a nested dictionary using a dot-separated key path safely."""
+    keys = key_path.split(sep)
     current = data
-    
-    try:
-        for part in parts:
-            current = current[part]
-        return current
-    except (KeyError, TypeError):
-        return None
+    for key in keys:
+        if isinstance(current, dict) and key in current:
+            current = current[key]
+        else:
+            return default
+    return current
 
-def sanitize_payload(data: Dict[str, Any], allowed_keys: Iterable[str]) -> Dict[str, Any]:
-    """Filter dictionary to include only permitted keys."""
-    return {k: v for k, v in data.items() if k in allowed_keys}
 
-if __name__ == "__main__":
-    # Example usage for verification
-    sample = {"user": {"profile": {"id": 123}}}
-    print(extract_nested_key(sample, "user.profile.id"))
+def filter_empty_values(data: Dict[str, Any], recursive: bool = False) -> Dict[str, Any]:
+    """Remove keys with None or empty string values from a dictionary."""
+    result = {}
+    for k, v in data.items():
+        if recursive and isinstance(v, dict):
+            v = filter_empty_values(v, recursive=True)
+        if v is not None and v != "":
+            result[k] = v
+    return result
