@@ -1,33 +1,30 @@
 import re
-from functools import lru_cache
-from typing import Optional
+from typing import Any, Optional
 
-# Pre-compile regex patterns for performance
-_EMAIL_REGEX = re.compile(r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$')
+def is_email(value: str) -> bool:
+    """Validate RFC 5322 email string format."""
+    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    return bool(re.match(pattern, value))
 
-@lru_cache(maxsize=128)
-def validate_email_format(email: str) -> bool:
-    """Validates email format using cached regex evaluation."""
-    if not isinstance(email, str):
-        return False
-    return bool(_EMAIL_REGEX.match(email))
+def is_valid_uuid(val: str) -> bool:
+    """Validate standard 8-4-4-4-12 UUID format."""
+    pattern = r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+    return bool(re.match(pattern, val.lower()))
 
-def sanitize_input(value: str) -> str:
-    """Strips whitespace and normalizes string input."""
-    if not isinstance(value, str):
-        return ''
-    return value.strip()
+def ensure_list(data: Any) -> list:
+    """Force input into a flat list structure."""
+    if data is None:
+        return []
+    if isinstance(data, (list, tuple, set)):
+        return list(data)
+    return [data]
 
-def batch_validate(items: list[str]) -> list[bool]:
-    """Efficient batch validation using cached function calls."""
-    return [validate_email_format(item) for item in items]
+def is_truthy(value: Any) -> bool:
+    """Determine boolean status for loose input."""
+    if isinstance(value, str):
+        return value.lower() in ('true', '1', 'yes', 'y', 't')
+    return bool(value)
 
-class ValidatorContext:
-    """Contextual wrapper for validation logic."""
-    def __init__(self, strict: bool = True):
-        self.strict = strict
-
-    def check(self, email: Optional[str]) -> bool:
-        if email is None:
-            return not self.strict
-        return validate_email_format(email)
+def validate_range(value: int, min_val: int, max_val: int) -> bool:
+    """Check integer bounds for inclusive range."""
+    return min_val <= value <= max_val
