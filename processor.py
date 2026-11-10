@@ -1,48 +1,50 @@
-"""Data processing utilities for batching, dictionary manipulation, and sequence formatting."""
+"""Data record processing module with strict input validation."""
 
-from typing import Any, Dict, Generator, List, Sequence, TypeVar
-
-T = TypeVar("T")
+from typing import Any, Dict, List, Optional, Tuple
 
 
-def chunk_sequence(data: Sequence[T], chunk_size: int) -> Generator[List[T], None, None]:
-    """Yield successive chunks of a specified size from a sequence."""
-    if chunk_size <= 0:
-        raise ValueError("chunk_size must be a positive integer")
-    for i in range(0, len(data), chunk_size):
-        yield list(data[i : i + chunk_size])
+class RecordProcessor:
+    """Processes incoming data items after validating required fields and types."""
 
+    def __init__(self, required_keys: Optional[List[str]] = None) -> None:
+        self.required_keys = required_keys or ["id", "name", "payload"]
+        self.processed_count = 0
+        self.rejected_count = 0
 
-def flatten_dict(d: Dict[str, Any], parent_key: str = "", sep: str = ".") -> Dict[str, Any]:
-    """Flatten a nested dictionary into a single-level dictionary with delimited keys."""
-    items: List[tuple[str, Any]] = []
-    for key, value in d.items():
-        new_key = f"{parent_key}{sep}{key}" if parent_key else key
-        if isinstance(value, dict):
-            items.extend(flatten_dict(value, new_key, sep=sep).items())
-        else:
-            items.append((new_key, value))
-    return dict(items)
+    def validate_record(self, record: Any) -> Tuple[bool, str]:
+        """Validate a single record structure and field constraints."""
+        if not isinstance(record, dict):
+            return False, "Record must be a dictionary"
 
+        for key in self.required_keys:
+            if key not in record:
+                return False, f"Missing required field: '{key}'"
 
-def safe_get(data: Dict[str, Any], key_path: str, default: Any = None, sep: str = ".") -> Any:
-    """Retrieve a value from a nested dictionary using a dot-separated key path safely."""
-    keys = key_path.split(sep)
-    current = data
-    for key in keys:
-        if isinstance(current, dict) and key in current:
-            current = current[key]
-        else:
-            return default
-    return current
+        if not isinstance(record["id"], (int, str)) or not str(record["id"]).strip():
+            return False, "Field 'id' must be a non-empty string or integer"
 
+        if not isinstance(record["name"], str) or not record["name"].strip():
+            return False, "Field 'name' must be a non-empty string"
 
-def filter_empty_values(data: Dict[str, Any], recursive: bool = False) -> Dict[str, Any]:
-    """Remove keys with None or empty string values from a dictionary."""
-    result = {}
-    for k, v in data.items():
-        if recursive and isinstance(v, dict):
-            v = filter_empty_values(v, recursive=True)
-        if v is not None and v != "":
-            result[k] = v
-    return result
+        return True, "Valid"
+
+    def process_batch(self, items: List[Any]) -> List[Dict[str, Any]]:
+        """Main processing loop with per-item validation."""
+        valid_results = []
+
+        for index, item in enumerate(items):
+            is_valid, reason = self.validate_record(item)
+            if not is_valid:
+                self.rejected_count += 1
+                continue
+
+            processed_item = {
+                "id": str(item["id"]),
+                "name": item["name"].strip(),
+                "payload": item["payload"],
+                "status": "processed",
+            }
+            valid_results.append(processed_item)
+            self.processed_count += 1
+
+        return valid_results
