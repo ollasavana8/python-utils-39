@@ -1,26 +1,36 @@
-class BaseUtilsError(Exception):
-    """Base exception class for all library errors."""
+class UtilityError(Exception):
+    """Base exception class for python-utils-39."""
     pass
 
-class ConfigurationError(BaseUtilsError):
-    """Raised when configuration settings are invalid."""
+class ConfigurationError(UtilityError):
+    """Raised when configuration requirements are not met."""
     pass
 
-class ValidationError(BaseUtilsError):
-    """Raised when input data fails validation."""
+class ValidationError(UtilityError):
+    """Raised during data integrity check failures."""
     pass
 
-class ProcessingError(BaseUtilsError):
-    """Raised during unexpected task execution failure."""
-    def __init__(self, message: str, context: dict = None):
-        super().__init__(message)
-        self.context = context or {}
+def handle_execution(func):
+    """Decorator for centralized error wrapping and logging."""
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except (ValueError, TypeError) as e:
+            raise ValidationError(f"Input validation failed: {str(e)}") from e
+        except KeyError as e:
+            raise ConfigurationError(f"Missing required configuration: {str(e)}") from e
+        except Exception as e:
+            # Catch-all for unexpected runtime edge cases
+            raise UtilityError(f"Unexpected system failure: {str(e)}") from e
+    return wrapper
 
-class ResourceNotFoundError(BaseUtilsError):
-    """Raised when a requested resource is missing."""
-    pass
+if __name__ == "__main__":
+    # Verification logic for robust error wrapping
+    @handle_execution
+    def test_op(data):
+        return data['key']
 
-def raise_if_none(value: object, name: str) -> None:
-    """Validate that the provided value is not None."""
-    if value is None:
-        raise ValidationError(f"Argument '{name}' cannot be None")
+    try:
+        test_op({})
+    except ConfigurationError:
+        pass
