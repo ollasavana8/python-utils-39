@@ -1,51 +1,61 @@
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 # python-utils-39
 
-A collection of lightweight, high-performance utility functions designed to streamline daily Python development. This library reduces boilerplate code for common file operations, string manipulation, and system-level tasks.
+`python-utils-39` is a lightweight, zero-dependency utility toolkit designed to streamline common Python 3.9+ development patterns. It provides optimized helpers for data manipulation, thread-safe caching, and resilient asynchronous task execution.
 
 ## Features
 
-*   **File Streamliner:** Simplified decorators and context managers for atomic file writes and recursive directory scanning.
-*   **Data Normalization:** Robust helper functions to clean, validate, and transform nested dictionaries and lists.
-*   **System Helpers:** Cross-platform wrappers for executing shell commands with real-time timeout and logging capabilities.
-*   **Format Converters:** Built-in tools for seamless conversion between JSON, YAML, and CSV formats with custom schema support.
+- **Thread-Safe Caching:** In-memory LRU cache decorator featuring automatic TTL expiration and thread safety.
+- **Enhanced File I/O:** Atomic file writing and stream parsing for large JSON and YAML payloads to prevent data corruption.
+- **Async Retry Decorator:** Configurable retry handler supporting exponential backoff, custom exception filtering, and event logging.
+- **Dict Deep-Merge:** Recursive dictionary merging utility that gracefully handles nested lists and set combinations without mutating source objects.
 
 ## Installation
 
-Install `python-utils-39` via pip:
+Install the package directly via `pip`:
 
 ```bash
 pip install python-utils-39
 ```
 
-Or, add it to your `requirements.txt`:
+Or install from the repository source:
 
-```text
-python-utils-39>=1.0.0
+```bash
+git clone https://github.com/Developer/python-utils-39.git
+cd python-utils-39
+pip install .
 ```
 
 ## Basic Usage
 
-Quickly manage file I/O and perform data normalization using the core utilities:
+Here is a quick example demonstrating dictionary deep merging and TTL caching:
 
 ```python
-from pyutils39 import file_io, data_tools
+import time
+from python_utils_39.cache import ttl_cache
+from python_utils_39.dict_utils import deep_merge
 
-# Efficiently read and transform nested data
-raw_data = {"user": {"id": 123, "meta": None}}
-clean_data = data_tools.strip_nulls(raw_data)
+# 1. Thread-safe TTL Cache Example
+@ttl_cache(ttl_seconds=300, maxsize=128)
+def fetch_user_permissions(user_id: int) -> dict:
+    # Simulating an expensive database call
+    return {"user_id": user_id, "roles": ["admin", "developer"]}
 
-# Safe atomic writing
-file_io.safe_write("config.json", clean_data, format="json")
+# 2. Deep Dictionary Merge Example
+base_config = {"db": {"host": "localhost", "port": 5432}, "debug": False}
+env_override = {"db": {"port": 5433}, "debug": True}
 
-print(f"Processed: {clean_data}")
+merged_config = deep_merge(base_config, env_override)
+
+print(merged_config)
+# Output: {'db': {'host': 'localhost', 'port': 5433}, 'debug': True}
+
+permissions = fetch_user_permissions(42)
+print(permissions)
+# Output: {'user_id': 42, 'roles': ['admin', 'developer']}
 ```
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request for any bug fixes or improvements to existing utility modules. Ensure all new features include unit tests in the `/tests` directory.
 
 ## License
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License - see the `LICENSE` file for details.
