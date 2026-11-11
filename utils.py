@@ -1,47 +1,32 @@
-import functools
-import logging
-import random
-import time
-from typing import Any, Callable, Tuple, Type, Union
+import json
+from typing import Any, Dict, Optional
 
-logger = logging.getLogger(__name__)
+def load_json_data(filepath: str) -> Dict[str, Any]:
+    """Reads and parses a JSON configuration file."""
+    try:
+        with open(filepath, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError) as e:
+        print(f"Error accessing config file {filepath}: {e}")
+        return {}
 
+def flatten_dict(d: Dict[str, Any], parent_key: str = '', sep: str = '_') -> Dict[str, Any]:
+    """Flattens a nested dictionary into a single level."""
+    items = []
+    for k, v in d.items():
+        new_key = f"{parent_key}{sep}{k}" if parent_key else k
+        if isinstance(v, dict):
+            items.extend(flatten_dict(v, new_key, sep=sep).items())
+        else:
+            items.append((new_key, v))
+    return dict(items)
 
-def retry_network_op(
-    retries: int = 3,
-    delay: float = 1.0,
-    backoff: float = 2.0,
-    exceptions: Union[Type[Exception], Tuple[Type[Exception], ...]] = (Exception,),
-) -> Callable:
-    """Decorator that retries a network operation with exponential backoff.
-
-    Args:
-        retries: Maximum number of attempts before raising the exception.
-        delay: Initial delay between retries in seconds.
-        backoff: Multiplier applied to delay after each failure.
-        exceptions: Exception types to catch and retry.
-    """
-    def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
-        @functools.wraps(func)
-        def wrapper(*args: Any, **kwargs: Any) -> Any:
-            current_delay = delay
-            for attempt in range(1, retries + 1):
-                try:
-                    return func(*args, **kwargs)
-                except exceptions as err:
-                    if attempt == retries:
-                        logger.error("Final attempt %d failed for %s: %s", attempt, func.__name__, err)
-                        raise
-
-                    jitter = random.uniform(0, 0.1 * current_delay)
-                    sleep_time = current_delay + jitter
-                    logger.warning(
-                        "Attempt %d/%d for %s failed (%s). Retrying in %.2fs...",
-                        attempt, retries, func.__name__, err, sleep_time
-                    )
-                    time.sleep(sleep_time)
-                    current_delay *= backoff
-
-        return wrapper
-
-    return decorator
+def sanitize_input(data: Any) -> Any:
+    """Basic sanitization for string data inputs."""
+    if isinstance(data, str):
+        return data.strip()
+    if isinstance(data, dict):
+        return {k: sanitize_input(v) for k, v in data.items()}
+    if isinstance(data, list):
+        return [sanitize_input(v) for v in data]
+    return data
