@@ -1,40 +1,47 @@
+import json
 import os
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
-class ConfigManager:
-    """Handles application configuration loading and access."""
-    
-    def __init__(self, defaults: Dict[str, Any] = None):
-        self._settings = defaults or {}
-        self._load_from_env()
 
-    def _load_from_env(self) -> None:
-        """Overwrites settings with environment variables if present."""
-        for key in self._settings.keys():
-            env_val = os.getenv(key.upper())
-            if env_val is not None:
-                self._settings[key] = self._parse_env_type(env_val)
+class ConfigLoader:
+    """Loads and manages application configuration with default fallbacks."""
 
-    def _parse_env_type(self, value: str) -> Any:
-        """Coerces environment string to correct data type."""
-        if value.lower() in ('true', 'yes'): return True
-        if value.lower() in ('false', 'no'): return False
-        try:
-            return int(value)
-        except ValueError:
-            return value
+    def __init__(self, defaults: Optional[Dict[str, Any]] = None):
+        self._config: Dict[str, Any] = defaults.copy() if defaults else {}
+
+    def load_from_dict(self, data: Dict[str, Any]) -> None:
+        """Merge custom dictionary into current configuration."""
+        self._config = self._deep_update(self._config, data)
+
+    def load_from_json(self, filepath: str) -> None:
+        """Load configuration settings from a JSON file."""
+        if os.path.exists(filepath):
+            with open(filepath, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                self.load_from_dict(data)
 
     def get(self, key: str, default: Any = None) -> Any:
-        """Retrieves config value by key."""
-        return self._settings.get(key, default)
+        """Retrieve configuration value by key supporting dot notation."""
+        keys = key.split(".")
+        value = self._config
+        for k in keys:
+            if isinstance(value, dict) and k in value:
+                value = value[k]
+            else:
+                return default
+        return value
 
-    def update(self, new_settings: Dict[str, Any]) -> None:
-        """Merges new settings into existing configuration."""
-        self._settings.update(new_settings)
+    def _deep_update(self, base: Dict[str, Any], update: Dict[str, Any]) -> Dict[str, Any]:
+        """Recursively update nested dictionaries."""
+        result = base.copy()
+        for key, val in update.items():
+            if isinstance(val, dict) and key in result and isinstance(result[key], dict):
+                result[key] = self._deep_update(result[key], val)
+            else:
+                result[key] = val
+        return result
 
-# Global default configuration instance
-default_config = ConfigManager({
-    "debug": False,
-    "log_level": "INFO",
-    "max_retries": 3
-})
+    @property
+    def config(self) -> Dict[str, Any]:
+        """Return copy of whole configuration dict."""
+        return self._config.copy()
