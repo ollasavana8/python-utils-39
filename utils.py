@@ -1,50 +1,28 @@
+import time
 import functools
 import logging
-import random
-import time
-from typing import Any, Callable, Tuple, Type, Union
 
 logger = logging.getLogger(__name__)
 
-
-def retry_on_exception(
-    retries: int = 3,
-    delay: float = 1.0,
-    backoff: float = 2.0,
-    jitter: bool = True,
-    exceptions: Union[Type[BaseException], Tuple[Type[BaseException], ...]] = (Exception,),
-) -> Callable:
-    """
-    Decorator that retries a function with exponential backoff and jitter.
-
-    Useful for handling transient errors in network operations.
-    """
-    def decorator(func: Callable) -> Callable:
+def retry(max_attempts=3, delay=1, backoff=2, exceptions=(Exception,)):
+    """Decorator for retrying functions with exponential backoff."""
+    def decorator(func):
         @functools.wraps(func)
-        def wrapper(*args: Any, **kwargs: Any) -> Any:
+        def wrapper(*args, **kwargs):
+            attempts = 0
             current_delay = delay
-            for attempt in range(1, retries + 1):
+            
+            while attempts < max_attempts:
                 try:
                     return func(*args, **kwargs)
-                except exceptions as exc:
-                    if attempt == retries:
-                        logger.error(
-                            "Call to '%s' failed after %d attempts: %s",
-                            func.__name__, retries, exc
-                        )
+                except exceptions as e:
+                    attempts += 1
+                    if attempts == max_attempts:
+                        logger.error(f"Final attempt failed for {func.__name__}")
                         raise
-
-                    sleep_time = current_delay
-                    if jitter:
-                        sleep_time += random.uniform(0, current_delay * 0.5)
-
-                    logger.warning(
-                        "Attempt %d/%d for '%s' failed: %s. Retrying in %.2fs...",
-                        attempt, retries, func.__name__, exc, sleep_time
-                    )
-                    time.sleep(sleep_time)
+                    
+                    logger.warning(f"Attempt {attempts} failed: {e}. Retrying in {current_delay}s...")
+                    time.sleep(current_delay)
                     current_delay *= backoff
-
         return wrapper
-
     return decorator
