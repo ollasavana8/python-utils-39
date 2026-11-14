@@ -1,30 +1,31 @@
 import re
-from typing import Any, Optional
+from functools import lru_cache
+from typing import Pattern
 
-def is_email(value: str) -> bool:
-    """Validate RFC 5322 email string format."""
-    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
-    return bool(re.match(pattern, value))
+# Cache compiled regex patterns to avoid overhead
+@lru_cache(maxsize=32)
+def get_regex(pattern: str) -> Pattern:
+    return re.compile(pattern)
 
-def is_valid_uuid(val: str) -> bool:
-    """Validate standard 8-4-4-4-12 UUID format."""
-    pattern = r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
-    return bool(re.match(pattern, val.lower()))
+class DataValidator:
+    """High-performance data validation utilities."""
 
-def ensure_list(data: Any) -> list:
-    """Force input into a flat list structure."""
-    if data is None:
-        return []
-    if isinstance(data, (list, tuple, set)):
-        return list(data)
-    return [data]
+    def __init__(self):
+        self._email_pattern = r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$'
 
-def is_truthy(value: Any) -> bool:
-    """Determine boolean status for loose input."""
-    if isinstance(value, str):
-        return value.lower() in ('true', '1', 'yes', 'y', 't')
-    return bool(value)
+    def is_valid_email(self, email: str) -> bool:
+        """Checks email format using cached compiled regex."""
+        if not email or not isinstance(email, str):
+            return False
+        
+        regex = get_regex(self._email_pattern)
+        return bool(regex.match(email))
 
-def validate_range(value: int, min_val: int, max_val: int) -> bool:
-    """Check integer bounds for inclusive range."""
+    def bulk_validate_emails(self, email_list: list[str]) -> list[bool]:
+        """Efficient batch processing of email addresses."""
+        regex = get_regex(self._email_pattern)
+        return [bool(regex.match(email)) for email in email_list if isinstance(email, str)]
+
+def validate_numeric_range(value: int, min_val: int, max_val: int) -> bool:
+    """Fast bound check for integer values."""
     return min_val <= value <= max_val
