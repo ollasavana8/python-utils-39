@@ -1,33 +1,75 @@
-import os
-import json
-from typing import Any, Optional
+"""General utility helper functions for data manipulation and execution control."""
 
-def load_json_file(file_path: str) -> dict:
-    """Loads and parses a JSON file safely."""
-    if not os.path.exists(file_path):
-        return {}
-    with open(file_path, 'r', encoding='utf-8') as f:
-        return json.load(f)
+import time
+from typing import Any, Callable, Dict, Generator, List, TypeVar, Optional
 
-def save_json_file(data: dict, file_path: str) -> None:
-    """Saves dictionary to a JSON file."""
-    with open(file_path, 'w', encoding='utf-8') as f:
-        json.dump(data, f, indent=4)
+T = TypeVar("T")
 
-def get_env_variable(key: str, default: Optional[str] = None) -> str:
-    """Retrieves environment variable with fallback."""
-    return os.environ.get(key, default or "")
 
-def ensure_directory(path: str) -> None:
-    """Creates directory if it does not exist."""
-    if not os.path.exists(path):
-        os.makedirs(path)
+def chunk_iterable(iterable: List[T], chunk_size: int) -> Generator[List[T], None, None]:
+    """Yield successive chunks of specified size from a list.
 
-def chunk_list(items: list, size: int):
-    """Yields successive n-sized chunks from list."""
-    for i in range(0, len(items), size):
-        yield items[i:i + size]
+    Args:
+        iterable: The list to be split into chunks.
+        chunk_size: Maximum size of each yielded chunk.
 
-def flatten_list(nested_list: list) -> list:
-    """Flattens a list of lists into one."""
-    return [item for sublist in nested_list for item in sublist]
+    Yields:
+        Lists of elements up to chunk_size long.
+    """
+    if chunk_size <= 0:
+        raise ValueError("chunk_size must be a positive integer")
+    
+    for i in range(0, len(iterable), chunk_size):
+        yield iterable[i : i + chunk_size]
+
+
+def flatten_dict(
+    d: Dict[str, Any], parent_key: str = "", sep: str = "."
+) -> Dict[str, Any]:
+    """Flatten a nested dictionary into a single-level dictionary using separator key join.
+
+    Args:
+        d: The nested dictionary to flatten.
+        parent_key: Prefix key used during recursive traversal.
+        sep: Separator character between joined nested keys.
+
+    Returns:
+        A flat dictionary with combined keys.
+    """
+    items: Dict[str, Any] = {}
+    for k, v in d.items():
+        new_key = f"{parent_key}{sep}{k}" if parent_key else k
+        if isinstance(v, dict):
+            items.update(flatten_dict(v, new_key, sep=sep))
+        else:
+            items[new_key] = v
+    return items
+
+
+def retry_operation(
+    func: Callable[[], T],
+    retries: int = 3,
+    delay: float = 1.0,
+    backoff_factor: float = 2.0,
+) -> Optional[T]:
+    """Execute a callable with exponential backoff retry logic on failure.
+
+    Args:
+        func: Zero-argument function to attempt.
+        retries: Maximum number of failed retries allowed.
+        delay: Initial pause in seconds before the first retry.
+        backoff_factor: Multiplier applied to delay after every failed attempt.
+
+    Returns:
+        The result of func if successful, or None if retries exhaust.
+    """
+    current_delay = delay
+    for attempt in range(retries + 1):
+        try:
+            return func()
+        except Exception:
+            if attempt == retries:
+                raise
+            time.sleep(current_delay)
+            current_delay *= backoff_factor
+    return None
