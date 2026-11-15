@@ -1,35 +1,43 @@
 import logging
-from logging.handlers import RotatingFileHandler
-import os
+from typing import Optional
 
-LOG_FILE = "app.log"
-MAX_BYTES = 5 * 1024 * 1024
-BACKUP_COUNT = 3
+def get_logger(name: str, level: int = logging.INFO) -> logging.Logger:
+    """
+    Creates and configures a standard stream logger.
 
-def setup_logger(name: str = "app_logger") -> logging.Logger:
-    """Configures a rotating file logger for the application."""
+    Args:
+        name: Name of the logger instance.
+        level: Logging threshold level.
+
+    Returns:
+        A configured logging.Logger object.
+    """
     logger = logging.getLogger(name)
-    logger.setLevel(logging.INFO)
+    logger.setLevel(level)
 
     if not logger.handlers:
-        formatter = logging.Formatter(
-            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-        )
-
-        # Rotating file handler configuration
-        file_handler = RotatingFileHandler(
-            LOG_FILE, 
-            maxBytes=MAX_BYTES, 
-            backupCount=BACKUP_COUNT
-        )
-        file_handler.setFormatter(formatter)
-        logger.addHandler(file_handler)
-
-        # Optional: add console output
-        console_handler = logging.StreamHandler()
-        console_handler.setFormatter(formatter)
-        logger.addHandler(console_handler)
+        handler = logging.StreamHandler()
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
 
     return logger
 
-logger = setup_logger()
+def log_message(logger: logging.Logger, message: str, level: str = 'info') -> None:
+    """
+    Logs a message at the specified level.
+
+    Args:
+        logger: The logger instance to use.
+        message: Text content to record.
+        level: Severity level string.
+    """
+    log_map = {
+        'debug': logger.debug,
+        'info': logger.info,
+        'warning': logger.warning,
+        'error': logger.error
+    }
+    
+    log_func = log_map.get(level.lower(), logger.info)
+    log_func(message)
