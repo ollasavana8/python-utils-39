@@ -2,24 +2,33 @@ import json
 import os
 from typing import Any, Dict
 
-class ConfigLoader:
-    def __init__(self, defaults: Dict[str, Any]):
-        self._config = defaults.copy()
+def load_config(filepath: str, defaults: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Loads configuration from a JSON file, falling back to provided defaults
+    if the file does not exist or is malformed.
+    """
+    config = defaults.copy()
 
-    def load_from_file(self, filepath: str) -> None:
-        if os.path.exists(filepath):
-            with open(filepath, 'r') as f:
-                file_data = json.load(f)
-                self._config.update(file_data)
+    if not os.path.exists(filepath):
+        return config
 
-    def get(self, key: str, default: Any = None) -> Any:
-        return self._config.get(key, default)
+    try:
+        with open(filepath, 'r') as f:
+            data = json.load(f)
+            if isinstance(data, dict):
+                config.update(data)
+    except (json.JSONDecodeError, IOError):
+        pass
 
-    @property
-    def all(self) -> Dict[str, Any]:
-        return self._config.copy()
+    return config
 
-def get_config(filepath: str, defaults: Dict[str, Any]) -> ConfigLoader:
-    loader = ConfigLoader(defaults)
-    loader.load_from_file(filepath)
-    return loader
+def save_config(filepath: str, config: Dict[str, Any]) -> bool:
+    """
+    Persists the current configuration to a JSON file.
+    """
+    try:
+        with open(filepath, 'w') as f:
+            json.dump(config, f, indent=4)
+        return True
+    except IOError:
+        return False
