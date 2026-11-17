@@ -1,31 +1,37 @@
-import re
-from functools import lru_cache
-from typing import Pattern
+from typing import Any, Optional, Union
 
-# Cache compiled regex patterns to avoid overhead
-@lru_cache(maxsize=32)
-def get_regex(pattern: str) -> Pattern:
-    return re.compile(pattern)
-
-class DataValidator:
-    """High-performance data validation utilities."""
-
-    def __init__(self):
-        self._email_pattern = r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$'
-
-    def is_valid_email(self, email: str) -> bool:
-        """Checks email format using cached compiled regex."""
-        if not email or not isinstance(email, str):
-            return False
+def validate_numeric(value: Any, min_val: Optional[float] = None, max_val: Optional[float] = None) -> bool:
+    """Checks if value is a valid number within specified bounds."""
+    try:
+        numeric_val = float(value)
+    except (TypeError, ValueError):
+        return False
+    
+    if min_val is not None and numeric_val < min_val:
+        return False
+    if max_val is not None and numeric_val > max_val:
+        return False
         
-        regex = get_regex(self._email_pattern)
-        return bool(regex.match(email))
+    return True
 
-    def bulk_validate_emails(self, email_list: list[str]) -> list[bool]:
-        """Efficient batch processing of email addresses."""
-        regex = get_regex(self._email_pattern)
-        return [bool(regex.match(email)) for email in email_list if isinstance(email, str)]
+def sanitize_string(value: Any, strip: bool = True, default: str = "") -> str:
+    """Ensures input is a string, optionally stripping whitespace."""
+    if not isinstance(value, str):
+        return default
+    return value.strip() if strip else value
 
-def validate_numeric_range(value: int, min_val: int, max_val: int) -> bool:
-    """Fast bound check for integer values."""
-    return min_val <= value <= max_val
+def validate_required(data: dict, keys: list[str]) -> bool:
+    """Ensures all specified keys exist in dictionary and are non-empty."""
+    for key in keys:
+        if key not in data or data[key] is None:
+            return False
+        if isinstance(data[key], str) and not data[key].strip():
+            return False
+    return True
+
+def cast_to_bool(value: Any) -> bool:
+    """Converts common truthy values to boolean."""
+    if isinstance(value, bool):
+        return value
+    str_val = str(value).lower()
+    return str_val in ('true', '1', 't', 'y', 'yes')
