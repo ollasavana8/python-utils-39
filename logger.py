@@ -1,43 +1,28 @@
 import logging
-from typing import Optional
+import functools
+import time
+from typing import Callable, Any
 
-def get_logger(name: str, level: int = logging.INFO) -> logging.Logger:
-    """
-    Creates and configures a standard stream logger.
+# Cache loggers to avoid overhead of repeated lookups
+_loggers = {}
 
-    Args:
-        name: Name of the logger instance.
-        level: Logging threshold level.
+def get_logger(name: str) -> logging.Logger:
+    """Retrieve or create a cached logger instance."""
+    if name not in _loggers:
+        _loggers[name] = logging.getLogger(name)
+    return _loggers[name]
 
-    Returns:
-        A configured logging.Logger object.
-    """
-    logger = logging.getLogger(name)
-    logger.setLevel(level)
+def benchmark(func: Callable) -> Callable:
+    """Performance monitoring decorator for functions."""
+    logger = get_logger(func.__module__)
 
-    if not logger.handlers:
-        handler = logging.StreamHandler()
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        handler.setFormatter(formatter)
-        logger.addHandler(handler)
-
-    return logger
-
-def log_message(logger: logging.Logger, message: str, level: str = 'info') -> None:
-    """
-    Logs a message at the specified level.
-
-    Args:
-        logger: The logger instance to use.
-        message: Text content to record.
-        level: Severity level string.
-    """
-    log_map = {
-        'debug': logger.debug,
-        'info': logger.info,
-        'warning': logger.warning,
-        'error': logger.error
-    }
-    
-    log_func = log_map.get(level.lower(), logger.info)
-    log_func(message)
+    @functools.wraps(func)
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
+        start_time = time.perf_counter()
+        try:
+            return func(*args, **kwargs)
+        finally:
+            duration = time.perf_counter() - start_time
+            if duration > 0.1:  # Log only expensive operations
+                logger.debug(f"operation {func.__name__} took {duration:.4f}s")
+    return wrapper
