@@ -1,28 +1,32 @@
-class BaseUtilsError(Exception):
-    """Base exception class for python-utils-39."""
+class UtilsError(Exception):
+    """Base exception for python-utils-39 operations."""
     pass
 
-class ConfigurationError(BaseUtilsError):
+class ConfigurationError(UtilsError):
     """Raised when configuration validation fails."""
     pass
 
-class ValidationError(BaseUtilsError):
-    """Raised during data integrity validation."""
+class ProcessingError(UtilsError):
+    """Raised when a data processor encounters bad input."""
     pass
 
-class ProcessingError(BaseUtilsError):
-    """Raised during pipeline execution tasks."""
-    def __init__(self, message: str, stage: str = "unknown"):
-        super().__init__(f"{message} (stage: {stage})")
-        self.stage = stage
-
-class ResourceNotFoundError(BaseUtilsError):
-    """Raised when a required resource is missing."""
+class ValidationError(UtilsError):
+    """Raised for input data validation failures."""
     pass
 
-def handle_exception(e: Exception) -> None:
-    """Standardized exception formatting for logs."""
-    if isinstance(e, BaseUtilsError):
-        print(f"Application error: {type(e).__name__} - {str(e)}")
+def handle_exception(exc: Exception) -> None:
+    """Centralized error reporting utility."""
+    if isinstance(exc, UtilsError):
+        print(f"[Handled] {type(exc).__name__}: {exc}")
     else:
-        print(f"Unexpected system error: {str(e)}")
+        print(f"[Unhandled] Unexpected error: {exc}")
+
+def safe_execute(func, *args, **kwargs):
+    """Decorator pattern for wrapping risky calls."""
+    try:
+        return func(*args, **kwargs)
+    except (ValueError, TypeError, KeyError) as e:
+        raise ProcessingError(f"Input operation failed: {e}") from e
+    except Exception as e:
+        handle_exception(e)
+        raise
