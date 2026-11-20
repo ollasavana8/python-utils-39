@@ -1,48 +1,38 @@
-import logging
-import traceback
-from typing import Any, Callable, Optional, Tuple
+import functools
+import time
+from typing import Any, Callable, Dict
 
-logger = logging.getLogger(__name__)
+# Cache for storing expensive function results
+_cache: Dict[str, Any] = {}
 
+def memoize(func: Callable) -> Callable:
+    """Performance decorator for caching function outputs."""
+    @functools.wraps(func)
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
+        key = f"{func.__name__}:{args}:{frozenset(kwargs.items())}"
+        if key not in _cache:
+            _cache[key] = func(*args, **kwargs)
+        return _cache[key]
+    return wrapper
 
-class ExecutionError(Exception):
-    """Custom exception raised when task execution fails safely."""
-    def __init__(self, message: str, original_exception: Optional[Exception] = None):
-        super().__init__(message)
-        self.original_exception = original_exception
+class DataHandler:
+    def __init__(self, data_source: list):
+        self._data = data_source
 
+    @memoize
+    def process_heavy_computation(self, threshold: int) -> int:
+        """Simulated intensive data processing task."""
+        # Simulate latency to demonstrate caching benefit
+        time.sleep(0.5)
+        return sum(x for x in self._data if x > threshold)
 
-class SafeTaskHandler:
-    """Handles execution of arbitrary tasks with robust error catching."""
+    def clear_cache(self) -> None:
+        """Manual cache invalidation for memory management."""
+        _cache.clear()
 
-    def __init__(self, suppress_exceptions: bool = False, default_return: Any = None):
-        self.suppress_exceptions = suppress_exceptions
-        self.default_return = default_return
-
-    def execute(self, func: Callable[..., Any], *args: Any, **kwargs: Any) -> Tuple[bool, Any]:
-        """Execute a callable safely, handling standard edge cases and unhandled exceptions."""
-        if func is None or not callable(func):
-            logger.error("Invalid task provided: task is None or not callable")
-            if self.suppress_exceptions:
-                return False, self.default_return
-            raise ExecutionError("Target task must be a valid callable")
-
-        try:
-            result = func(*args, **kwargs)
-            return True, result
-        except (TypeError, ValueError) as err:
-            logger.warning(f"Data or type mismatch during execution: {err}")
-            if self.suppress_exceptions:
-                return False, self.default_return
-            raise ExecutionError(f"Invalid input data or type: {err}", err) from err
-        except ZeroDivisionError as err:
-            logger.warning("Attempted division by zero in task execution")
-            if self.suppress_exceptions:
-                return False, self.default_return
-            raise ExecutionError("Math error: division by zero", err) from err
-        except Exception as err:
-            func_name = getattr(func, '__name__', str(func))
-            logger.error(f"Unexpected error executing {func_name}: {err}\n{traceback.format_exc()}")
-            if self.suppress_exceptions:
-                return False, self.default_return
-            raise ExecutionError(f"Task failed unexpectedly: {err}", err) from err
+if __name__ == "__main__":
+    handler = DataHandler([1, 2, 3, 4, 5])
+    # First call is slow
+    print(handler.process_heavy_computation(2))
+    # Second call uses cache
+    print(handler.process_heavy_computation(2))
