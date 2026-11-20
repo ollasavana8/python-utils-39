@@ -2,33 +2,29 @@ import json
 import os
 from typing import Any, Dict
 
-def load_config(filepath: str, defaults: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Loads configuration from a JSON file, falling back to provided defaults
-    if the file does not exist or is malformed.
-    """
-    config = defaults.copy()
+class ConfigLoader:
+    """Handles loading configuration from JSON with fallback defaults."""
 
-    if not os.path.exists(filepath):
-        return config
+    def __init__(self, default_config: Dict[str, Any] = None):
+        self.defaults = default_config or {}
 
-    try:
-        with open(filepath, 'r') as f:
-            data = json.load(f)
-            if isinstance(data, dict):
-                config.update(data)
-    except (json.JSONDecodeError, IOError):
-        pass
+    def load(self, filepath: str) -> Dict[str, Any]:
+        """Reads JSON file and merges with default settings."""
+        if not os.path.exists(filepath):
+            return self.defaults.copy()
 
-    return config
+        try:
+            with open(filepath, 'r', encoding='utf-8') as f:
+                file_data = json.load(f)
+            
+            config = self.defaults.copy()
+            config.update(file_data)
+            return config
+        except (json.JSONDecodeError, IOError):
+            return self.defaults.copy()
 
-def save_config(filepath: str, config: Dict[str, Any]) -> bool:
-    """
-    Persists the current configuration to a JSON file.
-    """
-    try:
-        with open(filepath, 'w') as f:
-            json.dump(config, f, indent=4)
-        return True
-    except IOError:
-        return False
+if __name__ == "__main__":
+    defaults = {"host": "localhost", "port": 8080, "debug": False}
+    loader = ConfigLoader(defaults)
+    current_config = loader.load("config.json")
+    print(f"Active configuration: {current_config}")
