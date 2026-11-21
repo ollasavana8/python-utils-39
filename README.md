@@ -1,61 +1,53 @@
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-
 # python-utils-39
 
-`python-utils-39` is a lightweight, zero-dependency utility toolkit designed to streamline common Python 3.9+ development patterns. It provides optimized helpers for data manipulation, thread-safe caching, and resilient asynchronous task execution.
+A collection of lightweight, high-performance utility functions designed to streamline daily Python development tasks. This library focuses on reducing boilerplate code for common file operations, data manipulation, and logging routines.
 
 ## Features
 
-- **Thread-Safe Caching:** In-memory LRU cache decorator featuring automatic TTL expiration and thread safety.
-- **Enhanced File I/O:** Atomic file writing and stream parsing for large JSON and YAML payloads to prevent data corruption.
-- **Async Retry Decorator:** Configurable retry handler supporting exponential backoff, custom exception filtering, and event logging.
-- **Dict Deep-Merge:** Recursive dictionary merging utility that gracefully handles nested lists and set combinations without mutating source objects.
+*   **Robust File Operations:** Simplified wrappers for directory traversal and atomic file writes.
+*   **Data Serialization:** Helper methods for rapid conversion between nested dictionaries, JSON, and YAML formats.
+*   **Enhanced Logging:** Pre-configured handlers for instant console and rotating file output with color-coded levels.
+*   **Concurrency Helpers:** Decorators for quick thread-pool execution and asynchronous timeout management.
 
 ## Installation
 
-Install the package directly via `pip`:
+Install the package directly from PyPI using `pip`:
 
 ```bash
 pip install python-utils-39
 ```
 
-Or install from the repository source:
+Or, if you are working within a virtual environment using `poetry`:
 
 ```bash
-git clone https://github.com/Developer/python-utils-39.git
-cd python-utils-39
-pip install .
+poetry add python-utils-39
 ```
 
-## Basic Usage
+## Usage
 
-Here is a quick example demonstrating dictionary deep merging and TTL caching:
+Below is a quick example of how to utilize the custom logger and the atomic file writer provided by the package:
 
 ```python
-import time
-from python_utils_39.cache import ttl_cache
-from python_utils_39.dict_utils import deep_merge
+from pyutils39.logger import get_logger
+from pyutils39.file_io import write_atomic
 
-# 1. Thread-safe TTL Cache Example
-@ttl_cache(ttl_seconds=300, maxsize=128)
-def fetch_user_permissions(user_id: int) -> dict:
-    # Simulating an expensive database call
-    return {"user_id": user_id, "roles": ["admin", "developer"]}
+# Initialize logger
+log = get_logger("app_module")
+log.info("Process starting...")
 
-# 2. Deep Dictionary Merge Example
-base_config = {"db": {"host": "localhost", "port": 5432}, "debug": False}
-env_override = {"db": {"port": 5433}, "debug": True}
+# Safely write data to disk
+data = {"status": "success", "id": 101}
+write_atomic("config.json", data, format="json")
 
-merged_config = deep_merge(base_config, env_override)
-
-print(merged_config)
-# Output: {'db': {'host': 'localhost', 'port': 5433}, 'debug': True}
-
-permissions = fetch_user_permissions(42)
-print(permissions)
-# Output: {'user_id': 42, 'roles': ['admin', 'developer']}
+log.info("Data written successfully.")
 ```
 
 ## License
 
-This project is licensed under the MIT License - see the `LICENSE` file for details.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Contributing
+
+Contributions are welcome! Please open an issue to discuss proposed changes or submit a pull request with unit tests covering your modifications.
