@@ -1,28 +1,32 @@
-import time
-import functools
-import logging
+from typing import Any, Dict, List, Union, Optional
 
-logger = logging.getLogger(__name__)
+def deep_get(data: Dict[str, Any], path: str, default: Any = None) -> Any:
+    """Retrieve nested dictionary values using dot notation."""
+    keys = path.split('.')
+    current = data
+    try:
+        for key in keys:
+            current = current[key]
+        return current
+    except (KeyError, TypeError):
+        return default
 
-def retry(max_attempts=3, delay=1, backoff=2, exceptions=(Exception,)):
-    """Decorator for retrying functions with exponential backoff."""
-    def decorator(func):
-        @functools.wraps(func)
-        def wrapper(*args, **kwargs):
-            attempts = 0
-            current_delay = delay
-            
-            while attempts < max_attempts:
-                try:
-                    return func(*args, **kwargs)
-                except exceptions as e:
-                    attempts += 1
-                    if attempts == max_attempts:
-                        logger.error(f"Final attempt failed for {func.__name__}")
-                        raise
-                    
-                    logger.warning(f"Attempt {attempts} failed: {e}. Retrying in {current_delay}s...")
-                    time.sleep(current_delay)
-                    current_delay *= backoff
-        return wrapper
-    return decorator
+def chunk_list(items: List[Any], size: int) -> List[List[Any]]:
+    """Split list into smaller sub-lists of fixed size."""
+    if size <= 0:
+        return [items]
+    return [items[i:i + size] for i in range(0, len(items), size)]
+
+def sanitize_dict(data: Dict[str, Any], keys: List[str]) -> Dict[str, Any]:
+    """Remove sensitive or unwanted keys from dictionary."""
+    return {k: v for k, v in data.items() if k not in keys}
+
+def flatten_list(nested_list: List[Union[Any, List[Any]]]) -> List[Any]:
+    """Convert list of lists into flat list."""
+    flat = []
+    for item in nested_list:
+        if isinstance(item, list):
+            flat.extend(flatten_list(item))
+        else:
+            flat.append(item)
+    return flat
