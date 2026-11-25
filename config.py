@@ -3,28 +3,28 @@ import os
 from typing import Any, Dict
 
 class ConfigLoader:
-    """Handles loading configuration from JSON with fallback defaults."""
+    """Utility for loading and merging configuration files."""
 
-    def __init__(self, default_config: Dict[str, Any] = None):
-        self.defaults = default_config or {}
+    def __init__(self, defaults: Dict[str, Any] = None):
+        self.defaults = defaults or {}
 
     def load(self, filepath: str) -> Dict[str, Any]:
-        """Reads JSON file and merges with default settings."""
+        """Loads json config and merges with defaults."""
+        config = self.defaults.copy()
+
         if not os.path.exists(filepath):
-            return self.defaults.copy()
+            return config
 
         try:
-            with open(filepath, 'r', encoding='utf-8') as f:
-                file_data = json.load(f)
+            with open(filepath, 'r') as f:
+                user_config = json.load(f)
+                config.update(user_config)
+        except (json.JSONDecodeError, IOError) as e:
+            print(f"Error loading config: {e}")
             
-            config = self.defaults.copy()
-            config.update(file_data)
-            return config
-        except (json.JSONDecodeError, IOError):
-            return self.defaults.copy()
+        return config
 
-if __name__ == "__main__":
-    defaults = {"host": "localhost", "port": 8080, "debug": False}
+def get_config(path: str, defaults: Dict[str, Any] = None) -> Dict[str, Any]:
+    """Convenience function for configuration loading."""
     loader = ConfigLoader(defaults)
-    current_config = loader.load("config.json")
-    print(f"Active configuration: {current_config}")
+    return loader.load(path)
