@@ -1,50 +1,35 @@
-"""Data record processing module with strict input validation."""
+import logging
 
-from typing import Any, Dict, List, Optional, Tuple
+# Configure basic logging for the processor
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
+def validate_input(data):
+    """Ensures input is a non-empty dictionary containing integer keys."""
+    if not isinstance(data, dict):
+        raise ValueError("Input must be a dictionary")
+    if not data:
+        raise ValueError("Input dictionary cannot be empty")
+    for key, value in data.items():
+        if not isinstance(key, int):
+            raise TypeError(f"Key {key} must be an integer")
+    return True
 
-class RecordProcessor:
-    """Processes incoming data items after validating required fields and types."""
+def process_data_stream(stream):
+    """Main loop for processing incoming data batches."""
+    for batch in stream:
+        try:
+            if validate_input(batch):
+                # Simulate processing logic
+                result = {k: v * 2 for k, v in batch.items()}
+                logger.info(f"Processed batch with {len(result)} items")
+        except (ValueError, TypeError) as e:
+            logger.error(f"Invalid batch encountered: {e}")
+            continue
+        except Exception as e:
+            logger.critical(f"Unexpected failure: {e}")
+            break
 
-    def __init__(self, required_keys: Optional[List[str]] = None) -> None:
-        self.required_keys = required_keys or ["id", "name", "payload"]
-        self.processed_count = 0
-        self.rejected_count = 0
-
-    def validate_record(self, record: Any) -> Tuple[bool, str]:
-        """Validate a single record structure and field constraints."""
-        if not isinstance(record, dict):
-            return False, "Record must be a dictionary"
-
-        for key in self.required_keys:
-            if key not in record:
-                return False, f"Missing required field: '{key}'"
-
-        if not isinstance(record["id"], (int, str)) or not str(record["id"]).strip():
-            return False, "Field 'id' must be a non-empty string or integer"
-
-        if not isinstance(record["name"], str) or not record["name"].strip():
-            return False, "Field 'name' must be a non-empty string"
-
-        return True, "Valid"
-
-    def process_batch(self, items: List[Any]) -> List[Dict[str, Any]]:
-        """Main processing loop with per-item validation."""
-        valid_results = []
-
-        for index, item in enumerate(items):
-            is_valid, reason = self.validate_record(item)
-            if not is_valid:
-                self.rejected_count += 1
-                continue
-
-            processed_item = {
-                "id": str(item["id"]),
-                "name": item["name"].strip(),
-                "payload": item["payload"],
-                "status": "processed",
-            }
-            valid_results.append(processed_item)
-            self.processed_count += 1
-
-        return valid_results
+if __name__ == "__main__":
+    test_stream = [{1: 10, 2: 20}, {1: 5}, "invalid", {3: 30}]
+    process_data_stream(test_stream)
