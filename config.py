@@ -3,28 +3,28 @@ import os
 from typing import Any, Dict
 
 class ConfigLoader:
-    """Utility for loading and merging configuration files."""
+    def __init__(self, defaults: Dict[str, Any]):
+        self.defaults = defaults
+        self.config = defaults.copy()
 
-    def __init__(self, defaults: Dict[str, Any] = None):
-        self.defaults = defaults or {}
-
-    def load(self, filepath: str) -> Dict[str, Any]:
-        """Loads json config and merges with defaults."""
-        config = self.defaults.copy()
-
+    def load_from_file(self, filepath: str) -> None:
+        """Updates internal config with values from a JSON file."""
         if not os.path.exists(filepath):
-            return config
-
+            return
+        
         try:
             with open(filepath, 'r') as f:
-                user_config = json.load(f)
-                config.update(user_config)
+                user_data = json.load(f)
+                self.config.update(user_data)
         except (json.JSONDecodeError, IOError) as e:
-            print(f"Error loading config: {e}")
-            
-        return config
+            print(f"Warning: Could not load config {filepath}: {e}")
 
-def get_config(path: str, defaults: Dict[str, Any] = None) -> Dict[str, Any]:
-    """Convenience function for configuration loading."""
+    def get(self, key: str, default: Any = None) -> Any:
+        """Retrieves config value with fallback logic."""
+        return self.config.get(key, default)
+
+def load_app_config(path: str, defaults: Dict[str, Any]) -> ConfigLoader:
+    """Factory function to instantiate and load config."""
     loader = ConfigLoader(defaults)
-    return loader.load(path)
+    loader.load_from_file(path)
+    return loader
