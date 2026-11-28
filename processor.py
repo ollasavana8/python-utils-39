@@ -1,35 +1,44 @@
-import logging
+from typing import List, Dict, Any, Optional
 
-# Configure basic logging for the processor
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+class DataProcessor:
+    """Handles batch processing of dictionary datasets with validation."""
 
-def validate_input(data):
-    """Ensures input is a non-empty dictionary containing integer keys."""
-    if not isinstance(data, dict):
-        raise ValueError("Input must be a dictionary")
-    if not data:
-        raise ValueError("Input dictionary cannot be empty")
-    for key, value in data.items():
-        if not isinstance(key, int):
-            raise TypeError(f"Key {key} must be an integer")
-    return True
+    def __init__(self, target_key: str) -> None:
+        self.target_key: str = target_key
 
-def process_data_stream(stream):
-    """Main loop for processing incoming data batches."""
-    for batch in stream:
-        try:
-            if validate_input(batch):
-                # Simulate processing logic
-                result = {k: v * 2 for k, v in batch.items()}
-                logger.info(f"Processed batch with {len(result)} items")
-        except (ValueError, TypeError) as e:
-            logger.error(f"Invalid batch encountered: {e}")
-            continue
-        except Exception as e:
-            logger.critical(f"Unexpected failure: {e}")
-            break
+    def extract_values(self, data: List[Dict[str, Any]]) -> List[Any]:
+        """
+        Extracts values associated with the target key from a list of dicts.
 
-if __name__ == "__main__":
-    test_stream = [{1: 10, 2: 20}, {1: 5}, "invalid", {3: 30}]
-    process_data_stream(test_stream)
+        Args:
+            data: A list of dictionaries to process.
+
+        Returns:
+            A list of values matching the target key.
+        """
+        return [item[self.target_key] for item in data if self.target_key in item]
+
+    def filter_by_threshold(self, data: List[Dict[str, Any]], threshold: float) -> List[Dict[str, Any]]:
+        """
+        Filters items where the target key value exceeds a numeric threshold.
+
+        Args:
+            data: The dataset to filter.
+            threshold: The minimum value required for inclusion.
+
+        Returns:
+            Filtered list of dictionaries.
+        """
+        return [item for item in data if item.get(self.target_key, 0) >= threshold]
+
+    def summarize(self, data: List[Dict[str, Any]]) -> Optional[Dict[str, float]]:
+        """
+        Calculates the mean value of the target key.
+
+        Returns:
+            Dictionary with the average or None if dataset is empty.
+        """
+        values = [item[self.target_key] for item in data if isinstance(item.get(self.target_key), (int, float))]
+        if not values:
+            return None
+        return {"average": sum(values) / len(values)}
